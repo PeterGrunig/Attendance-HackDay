@@ -47,6 +47,12 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			},
 		},
 		{
+			name: "teacher attendance approval",
+			load: func() (*template.Template, error) {
+				return loadTeacherTemplates("attendanceApproval.html")
+			},
+		},
+		{
 			name: "admin dashboard",
 			load: func() (*template.Template, error) {
 				return loadAdminTemplates("adminDash.html")

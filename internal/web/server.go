@@ -17,6 +17,7 @@ type AppStore interface {
 	StudentStore
 	TeacherStudentStore
 	CanvasIntegrationStore
+	AttendanceApprovalStore
 }
 
 func NewRouter(appStore AppStore) http.Handler {
@@ -28,6 +29,7 @@ func NewRouter(appStore AppStore) http.Handler {
 	studentStore = appStore
 	teacherStudentStore = appStore
 	canvasIntegrationStore = appStore
+	attendanceApprovalStore = appStore
 	mux := http.NewServeMux()
 
 	staticFS, err := fs.Sub(view.FS, "static")
@@ -64,6 +66,8 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("GET /teacherDashboard", RequireRole(http.HandlerFunc(teacherView), "teacher"))
 	mux.Handle("POST /teacherDashboard/edit", RequireRole(http.HandlerFunc(teacherEditView), "teacher"))
 	mux.Handle("GET /teacherDashboard/addStudent", RequireRole(http.HandlerFunc(teacherAddStudent), "teacher"))
+	mux.Handle("GET /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalView), "teacher", "admin"))
+	mux.Handle("POST /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalSubmit), "teacher", "admin"))
 
 	// admin routes
 	mux.Handle("GET /adminDashboard", RequireRole(http.HandlerFunc(adminView), "admin"))

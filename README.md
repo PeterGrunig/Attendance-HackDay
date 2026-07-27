@@ -16,6 +16,7 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - Manual coin adjustments are stored in `ManualCoinAdjustments` without creating transaction records.
 - The admin dashboard, User Settings, Add Student, Add Teacher, and classroom create/edit flows use PostgreSQL. `ClassroomMemberships` is the normalized roster source after `Seed_DataBase3.sql`; compatibility writes continue maintaining the legacy classroom columns and tables.
 - Teacher and admin dashboard scaffolding plus classroom management routes.
+- Teacher attendance approval for assigned classes, with admin access to every class. Student check-ins default the daily roster to present, missing check-ins default to absent, and each whole-class approval is stored as an immutable version. A later approval creates a correction-pending version without changing check-in rewards.
 - Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
 - Admin-only Canvas OAuth and manual roster import for selected courses. Imports include classes, teachers, students, and memberships only; assignments, grades, submissions, course content, passwords, and Canvas student pages are excluded.
 - Canvas imports automatically reuse stored external/SIS mappings. Email and local-ID candidates require confirmation, names are never used for matching, new users receive pending local accounts, and removed imported memberships are archived without deleting users or attendance history.
@@ -177,6 +178,7 @@ and later synchronization from **Admin → Canvas Import**.
     ```
 
 The application does not apply `Seed_DataBase3.sql` automatically. It must be
-applied before using Canvas roster import. Part 2 uses the existing Part 1
-tables and does not require an additional migration. Attendance export remains
-unimplemented.
+applied before using Canvas roster import or teacher attendance approval. Parts
+2 and 3 use the existing Part 1 tables and do not require another migration.
+Part 3 finalizes attendance locally only; export to an official external system
+remains unimplemented.

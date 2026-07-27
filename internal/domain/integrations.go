@@ -58,6 +58,38 @@ type AttendanceBatchEntry struct {
 	LastError        string
 }
 
+// AttendanceApprovalStudent is one active roster member as displayed in the
+// daily class review, including the raw check-in signal and reviewed status.
+type AttendanceApprovalStudent struct {
+	UserID           string
+	Name             string
+	CheckedIn        bool
+	Status           string
+	AttendanceMarkID *int64
+}
+
+// AttendanceApproval captures the latest immutable class snapshot alongside
+// the active roster teachers use to create the next version.
+type AttendanceApproval struct {
+	ClassroomID   string
+	ClassroomName string
+	Date          time.Time
+	BatchID       int64
+	Version       int
+	WorkflowState string
+	ApprovedBy    string
+	ApprovedAt    *time.Time
+	Students      []AttendanceApprovalStudent
+}
+
+type AttendanceApprovalRequest struct {
+	ClassroomID string
+	Date        time.Time
+	ActorUserID string
+	ActorRole   string
+	Statuses    map[string]string
+}
+
 type AttendanceDeliveryAttempt struct {
 	ID             int64
 	BatchID        int64

@@ -300,8 +300,9 @@ func (s *SQLStore) MarkAttendanceAndAwardCoins(ctx context.Context, userID, clas
 	if err != nil {
 		return err
 	}
-	// Keep the normalized mark in the same serializable transaction as the
-	// legacy JSON record and reward so partial check-ins cannot be observed.
+	// AttendanceMarks is the student's pending indication for teacher review,
+	// not an official decision. Keep it in the same transaction as the legacy
+	// JSON record and reward so partial check-ins cannot be observed.
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO AttendanceMarks
 			(UserID, ClassroomID, AttendanceDate, Status, Source, CheckInAt, UpdatedAt)

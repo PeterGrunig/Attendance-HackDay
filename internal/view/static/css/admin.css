@@ -88,6 +88,133 @@
   flex: 1;
 }
 
+.attendance-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  background: var(--admin-panel);
+  box-shadow: var(--admin-shadow);
+}
+
+.attendance-toolbar form {
+  display: flex;
+  align-items: end;
+  gap: .75rem;
+}
+
+.attendance-toolbar .form-group {
+  min-width: 190px;
+  margin: 0;
+}
+
+.attendance-workflow-summary {
+  display: grid;
+  justify-items: end;
+  gap: .25rem;
+}
+
+.attendance-workflow-summary > span,
+.attendance-workflow-summary small {
+  color: var(--admin-muted);
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.attendance-state,
+.attendance-checkin {
+  display: inline-block;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  color: #59645a;
+  background: #edf0eb;
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.attendance-state-approved,
+.attendance-state-recorded,
+.attendance-checkin-received {
+  color: var(--admin-green-dark);
+  background: var(--admin-green-soft);
+}
+
+.attendance-state-pending-export,
+.attendance-state-correction {
+  color: #725214;
+  background: #fff2cd;
+}
+
+.attendance-state-failed {
+  color: #8c2d2d;
+  background: #ffe5e5;
+}
+
+.attendance-review {
+  overflow: hidden;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  background: var(--admin-panel);
+  box-shadow: var(--admin-shadow);
+}
+
+.attendance-review-heading,
+.attendance-approval-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.attendance-review-heading {
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.attendance-review-heading h2,
+.attendance-review-heading p,
+.attendance-approval-actions p {
+  margin: 0;
+}
+
+.attendance-review-heading h2 {
+  font-size: 1.05rem;
+}
+
+.attendance-review-heading p,
+.attendance-approval-actions p {
+  color: var(--admin-muted);
+  font-size: .86rem;
+}
+
+.attendance-review-help {
+  max-width: 460px;
+  text-align: right;
+}
+
+.attendance-table td strong,
+.attendance-table td small {
+  display: block;
+}
+
+.attendance-table td small {
+  margin-top: .15rem;
+  color: var(--admin-muted);
+}
+
+.attendance-table td select {
+  min-width: 130px;
+}
+
+.attendance-approval-actions {
+  border-top: 1px solid var(--admin-line);
+  background: var(--admin-panel-soft);
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
@@ -698,6 +825,26 @@
   }
 
   .admin-form-card {
+    overflow-x: auto;
+  }
+
+  .attendance-toolbar,
+  .attendance-toolbar form,
+  .attendance-review-heading,
+  .attendance-approval-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attendance-workflow-summary {
+    justify-items: start;
+  }
+
+  .attendance-review-help {
+    text-align: left;
+  }
+
+  .attendance-table-wrap {
     overflow-x: auto;
   }
 }
