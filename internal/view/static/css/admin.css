@@ -198,6 +198,19 @@
   max-width: 1180px;
 }
 
+.pipeline-test-banner {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  color: var(--admin-green-dark);
+  background: var(--admin-green-soft);
+  border: 1px solid #d6eadc;
+  border-radius: 8px;
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
 .admin-page-header {
   margin-bottom: 1rem;
 }
