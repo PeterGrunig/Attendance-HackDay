@@ -95,7 +95,7 @@ func (s *SQLStore) LoadIntegrationConnection(ctx context.Context, connectionID i
 
 func (s *SQLStore) ListIntegrationConnections(ctx context.Context, providerKind string) ([]domain.IntegrationConnectionSummary, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT IntegrationConnectionID, ProviderKind, DisplayName, Status, Configuration, UpdatedAt
+		SELECT IntegrationConnectionID, ProviderKind, ConnectionRole, DisplayName, Status, Configuration, UpdatedAt
 		FROM IntegrationConnections
 		WHERE ProviderKind = $1
 		ORDER BY IntegrationConnectionID;
@@ -107,7 +107,7 @@ func (s *SQLStore) ListIntegrationConnections(ctx context.Context, providerKind 
 	items := []domain.IntegrationConnectionSummary{}
 	for rows.Next() {
 		var item domain.IntegrationConnectionSummary
-		if err := rows.Scan(&item.ID, &item.ProviderKind, &item.DisplayName, &item.Status, &item.Configuration, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProviderKind, &item.ConnectionRole, &item.DisplayName, &item.Status, &item.Configuration, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

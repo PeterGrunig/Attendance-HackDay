@@ -18,6 +18,7 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - Teacher and admin dashboard scaffolding plus classroom management routes.
 - Teacher attendance approval for assigned classes, with admin access to every class. Student check-ins default the daily roster to present, missing check-ins default to absent, and each whole-class approval is stored as an immutable version. A later approval creates a correction-pending version without changing check-in rewards.
 - Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
+- Provider-neutral attendance export outbox with per-student acceptance, external record identifiers, correction support, deterministic idempotency identities, five bounded automatic attempts, and manual retry from **Admin → Attendance Exports**. Failed batches remain visibly unofficial.
 - Admin-only Canvas OAuth and manual roster import for selected courses. Imports include classes, teachers, students, and memberships only; assignments, grades, submissions, course content, passwords, and Canvas student pages are excluded.
 - Canvas imports automatically reuse stored external/SIS mappings. Email and local-ID candidates require confirmation, names are never used for matching, new users receive pending local accounts, and removed imported memberships are archived without deleting users or attendance history.
 
@@ -32,6 +33,7 @@ see `todo.md` for the remaining project checklist.
 - `internal/domain` contains persisted application models.
 - `internal/integrations` contains provider-neutral contracts, capability metadata, provider registration, and AES-GCM credential encryption.
 - `internal/integrations/canvas` contains the Canvas OAuth client and roster-only adapter.
+- `internal/attendanceexport` orchestrates destination validation, durable outbox delivery, bounded retries, and provider-neutral response handling.
 - `internal/view` contains embedded templates, static CSS, and images.
 
 PostgreSQL is the application's only runtime data store. The browser cookie contains an opaque token; its short-lived session record remains in application memory and references the SQL `Users.UserID`.
@@ -113,6 +115,26 @@ integration credential boundary. Course selections are non-secret connection
 configuration. The admin manually previews and confirms every initial import
 and later synchronization from **Admin → Canvas Import**.
 
+
+### Attendance destination framework
+
+Attendance destinations are independent from roster-source connections. A
+destination adapter must advertise attendance writing plus safe upsert or
+correction support, validate its connection, and validate mappings for the
+local `present` and `absent` statuses before the admin can enable it.
+
+Approved batches use `AttendanceBatches` as a durable outbox. The worker checks
+up to 20 batches every 15 seconds and makes at most five automatic attempts with
+bounded exponential backoff. Idempotency identities include the destination,
+external school, class, school date, external student, and batch version.
+Per-student responses and external record IDs are retained for later
+corrections. Provider, authentication, mapping, and student-level failures leave
+the batch in `export_failed`; an admin can inspect and manually retry it.
+
+No production attendance-destination adapter is currently registered, so the
+page intentionally reports that no receiving system is installed and no
+official attendance network calls occur. The existing `Seed_DataBase3.sql`
+tables support this pipeline; Part 4 adds no database migration.
 
 ## Check Database in DBeaver
 

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/PeterGrunig/Attendance-HackDay/internal/attendanceexport"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations/canvas"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/store"
@@ -41,13 +43,17 @@ func main() {
 		log.Printf("Canvas provider registration failed: %v", err)
 	}
 	web.ConfigureCanvas(canvasClient)
+	sqlStore := store.NewSQLStore(db, storeOptions...)
+	exporter := attendanceexport.New(sqlStore, registry)
+	web.ConfigureAttendanceExports(registry, exporter)
+	go exporter.Run(context.Background())
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "4000"
 	}
 	log.Printf("starting server on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, web.NewRouter(store.NewSQLStore(db, storeOptions...))))
+	log.Fatal(http.ListenAndServe(":"+port, web.NewRouter(sqlStore)))
 }
 
 func databaseURL() string {

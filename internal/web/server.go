@@ -18,6 +18,7 @@ type AppStore interface {
 	TeacherStudentStore
 	CanvasIntegrationStore
 	AttendanceApprovalStore
+	AttendanceExportStore
 }
 
 func NewRouter(appStore AppStore) http.Handler {
@@ -30,6 +31,7 @@ func NewRouter(appStore AppStore) http.Handler {
 	teacherStudentStore = appStore
 	canvasIntegrationStore = appStore
 	attendanceApprovalStore = appStore
+	attendanceExportStore = appStore
 	mux := http.NewServeMux()
 
 	staticFS, err := fs.Sub(view.FS, "static")
@@ -90,6 +92,11 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("GET /admin/integrations/canvas/preview", RequireRole(http.HandlerFunc(canvasPreview), "admin"))
 	mux.Handle("POST /admin/integrations/canvas/sync", RequireRole(http.HandlerFunc(canvasSync), "admin"))
 	mux.Handle("POST /admin/integrations/canvas/import", RequireRole(http.HandlerFunc(canvasConfirmImport), "admin"))
+	mux.Handle("GET /admin/integrations/attendance", RequireRole(http.HandlerFunc(attendanceExportView), "admin"))
+	mux.Handle("POST /admin/integrations/attendance/connect", RequireRole(http.HandlerFunc(attendanceDestinationCreate), "admin"))
+	mux.Handle("POST /admin/integrations/attendance/validate", RequireRole(http.HandlerFunc(attendanceDestinationValidate), "admin"))
+	mux.Handle("POST /admin/integrations/attendance/disable", RequireRole(http.HandlerFunc(attendanceDestinationDisable), "admin"))
+	mux.Handle("POST /admin/integrations/attendance/retry", RequireRole(http.HandlerFunc(attendanceExportRetry), "admin"))
 
 	return mux
 }

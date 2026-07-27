@@ -1,0 +1,139 @@
+{{define "content"}}
+<div class="admin-page-header">
+    <h1>Attendance exports</h1>
+    <p>Connect an official attendance destination and monitor each approved class delivery.</p>
+</div>
+
+{{if .Message}}<div class="admin-notice" role="status">{{.Message}}</div>{{end}}
+{{if .Error}}<div class="admin-notice admin-notice-error" role="alert">{{.Error}}</div>{{end}}
+
+<section class="admin-form-card export-destination-setup">
+    <h2>Configure destination</h2>
+    {{if .Providers}}
+    <p>Only adapters that declare safe upsert or correction behavior can be enabled.</p>
+    <form method="POST" action="/admin/integrations/attendance/connect">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="export-form-grid">
+            <div class="form-group">
+                <label for="destination-provider">Provider</label>
+                <select id="destination-provider" name="provider_kind" required>
+                    {{range .Providers}}
+                    <option value="{{.Kind}}">{{.DisplayName}} · {{.Capabilities}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="destination-name">Connection name</label>
+                <input id="destination-name" name="display_name" required>
+            </div>
+            <div class="form-group">
+                <label for="present-code">Present code</label>
+                <input id="present-code" name="present_code" required>
+            </div>
+            <div class="form-group">
+                <label for="absent-code">Absent code</label>
+                <input id="absent-code" name="absent_code" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="provider-configuration">Non-secret provider configuration</label>
+            <textarea id="provider-configuration" name="provider_configuration" rows="4">{}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="destination-credentials">Credential JSON</label>
+            <textarea id="destination-credentials" name="credentials" rows="4">{}</textarea>
+            <small>Credentials cross the encryption boundary immediately and are never stored as plaintext.</small>
+        </div>
+        <button class="admin-submit-btn" type="submit">Validate and enable</button>
+    </form>
+    {{else}}
+    <div class="export-adapter-empty">
+        <strong>No attendance destination adapter is installed</strong>
+        <p>The provider-neutral export pipeline is ready, but no production system can receive records yet.</p>
+    </div>
+    {{end}}
+</section>
+
+<section class="admin-form-card">
+    <h2>Destination health</h2>
+    {{if .Connections}}
+    <div class="attendance-table-wrap">
+        <table>
+            <thead>
+                <tr><th>Connection</th><th>Capabilities</th><th>Codes</th><th>Health</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {{range .Connections}}
+                <tr>
+                    <td><strong>{{.DisplayName}}</strong><small>{{.Provider}} · updated {{.UpdatedAt}}</small></td>
+                    <td>{{.Capabilities}}</td>
+                    <td><small>Present: {{.PresentCode}}</small><small>Absent: {{.AbsentCode}}</small></td>
+                    <td><span class="integration-status integration-status-{{.Status}}">{{.Status}}</span></td>
+                    <td>
+                        <div class="integration-actions">
+                            <form method="POST" action="/admin/integrations/attendance/validate">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="hidden" name="connection_id" value="{{.ID}}">
+                                <button class="admin-submit-btn" type="submit">Validate</button>
+                            </form>
+                            {{if eq .Status "active"}}
+                            <form method="POST" action="/admin/integrations/attendance/disable">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="hidden" name="connection_id" value="{{.ID}}">
+                                <button class="admin-logout-btn" type="submit">Disable</button>
+                            </form>
+                            {{end}}
+                        </div>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p>No attendance destination has been configured.</p>
+    {{end}}
+</section>
+
+<section class="admin-form-card export-queue">
+    <div class="export-section-heading">
+        <div>
+            <h2>Export outbox</h2>
+            <p>Failed records remain unofficial until the destination accepts them.</p>
+        </div>
+        <span>{{if .Queue}}{{len .Queue}}{{else}}0{{end}} visible batches</span>
+    </div>
+    {{if .Queue}}
+    <div class="attendance-table-wrap">
+        <table>
+            <thead>
+                <tr><th>Class and date</th><th>Version</th><th>Destination</th><th>Attempts</th><th>State</th><th>Last response</th><th></th></tr>
+            </thead>
+            <tbody>
+            {{range .Queue}}
+                <tr>
+                    <td><strong>{{.ClassroomName}}</strong><small>{{.AttendanceDate.Format "Jan 2, 2006"}}</small></td>
+                    <td>{{.Version}}</td>
+                    <td>{{.Destination}}</td>
+                    <td>{{.AttemptCount}}</td>
+                    <td><span class="attendance-state attendance-state-{{.WorkflowState}}">{{if eq .WorkflowState "export_pending"}}Pending export{{else if eq .WorkflowState "export_failed"}}Export failed{{else}}Correction pending{{end}}</span></td>
+                    <td class="export-error-cell">{{if .LastError}}{{.LastError}}{{else}}—{{end}}</td>
+                    <td>
+                        {{if eq .WorkflowState "export_failed"}}
+                        <form method="POST" action="/admin/integrations/attendance/retry">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="batch_id" value="{{.BatchID}}">
+                            <button class="admin-submit-btn" type="submit">Retry</button>
+                        </form>
+                        {{end}}
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p>The export outbox is empty.</p>
+    {{end}}
+</section>
+{{end}}

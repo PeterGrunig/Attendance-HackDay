@@ -12,6 +12,7 @@ const (
 	CapabilityRosterRead            Capability = "roster.read"
 	CapabilityAttendanceWrite       Capability = "attendance.write"
 	CapabilityAttendanceCorrections Capability = "attendance.correct"
+	CapabilityAttendanceSafeUpsert  Capability = "attendance.upsert"
 	CapabilityIncrementalSync       Capability = "sync.incremental"
 )
 
@@ -49,12 +50,13 @@ func (m ProviderMetadata) Supports(capability Capability) bool {
 // Connection contains decrypted credentials only while an adapter call is in
 // progress. Persistence code must encrypt Credentials before storing it.
 type Connection struct {
-	ID            int64
-	ProviderKind  string
-	Role          ConnectionRole
-	DisplayName   string
-	Configuration json.RawMessage
-	Credentials   json.RawMessage
+	ID              int64
+	ProviderKind    string
+	Role            ConnectionRole
+	DisplayName     string
+	Configuration   json.RawMessage
+	Credentials     json.RawMessage
+	AttendanceCodes AttendanceCodeMapping
 }
 
 type School struct {
@@ -121,6 +123,16 @@ type AttendanceEntry struct {
 	StudentExternalID string
 	Status            AttendanceStatus
 	ExternalRecordID  string
+	IdempotencyKey    string
+}
+
+type AttendanceCodeMapping map[AttendanceStatus]string
+
+// AttendanceDestinationConfiguration keeps provider-neutral attendance codes
+// separate from the adapter's non-secret configuration document.
+type AttendanceDestinationConfiguration struct {
+	Provider json.RawMessage       `json:"provider"`
+	Codes    AttendanceCodeMapping `json:"attendance_codes"`
 }
 
 type AttendanceBatch struct {
@@ -156,5 +168,6 @@ type RosterSource interface {
 type AttendanceDestination interface {
 	Provider
 	ValidateConnection(context.Context, Connection) error
+	ValidateAttendanceCodes(context.Context, Connection, AttendanceCodeMapping) error
 	UpsertAttendanceBatch(context.Context, Connection, AttendanceBatch) (DeliveryResult, error)
 }

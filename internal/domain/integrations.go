@@ -103,6 +103,43 @@ type AttendanceDeliveryAttempt struct {
 	CompletedAt    *time.Time
 }
 
+type AttendanceExportQueueItem struct {
+	BatchID        int64
+	ClassroomID    string
+	ClassroomName  string
+	AttendanceDate time.Time
+	Version        int
+	WorkflowState  string
+	DestinationID  int64
+	Destination    string
+	AttemptCount   int
+	LastError      string
+	UpdatedAt      time.Time
+}
+
+type AttendanceExportWork struct {
+	Batch            AttendanceBatch
+	ConnectionID     int64
+	ProviderKind     string
+	SchoolExternalID string
+	ClassExternalID  string
+	Entries          []AttendanceExportWorkEntry
+}
+
+type AttendanceExportWorkEntry struct {
+	LocalUserID       string
+	StudentExternalID string
+	Status            string
+	ExternalRecordID  string
+}
+
+type AttendanceExportEntryResult struct {
+	LocalUserID      string
+	Accepted         bool
+	ExternalRecordID string
+	Message          string
+}
+
 type IntegrationAuditEvent struct {
 	ID          int64
 	ActorUserID string

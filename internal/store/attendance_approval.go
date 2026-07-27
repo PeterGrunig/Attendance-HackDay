@@ -252,15 +252,30 @@ func (s *SQLStore) ApproveAttendance(ctx context.Context, request domain.Attenda
 		state = "correction_pending"
 		eventType = "attendance.correction_created"
 	}
+	var destinationID sql.NullInt64
+	err = tx.QueryRowContext(ctx, `
+		SELECT IntegrationConnectionID
+		FROM IntegrationConnections
+		WHERE ConnectionRole = 'attendance_destination' AND Status = 'active'
+		ORDER BY UpdatedAt DESC, IntegrationConnectionID
+		LIMIT 1;
+	`).Scan(&destinationID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return domain.AttendanceBatch{}, err
+	}
+	if destinationID.Valid && version == 1 {
+		state = "export_pending"
+	}
 
 	var batchID int64
 	var approvedAt time.Time
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO AttendanceBatches
-			(ClassroomID, AttendanceDate, Version, WorkflowState, ApprovedBy, ApprovedAt)
-		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+			(ClassroomID, AttendanceDate, Version, WorkflowState, ApprovedBy, ApprovedAt,
+			 DestinationConnectionID)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)
 		RETURNING AttendanceBatchID, ApprovedAt;
-	`, request.ClassroomID, request.Date, version, state, request.ActorUserID).Scan(&batchID, &approvedAt)
+	`, request.ClassroomID, request.Date, version, state, request.ActorUserID, destinationID).Scan(&batchID, &approvedAt)
 	if err != nil {
 		return domain.AttendanceBatch{}, err
 	}

@@ -95,6 +95,12 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			},
 		},
 		{
+			name: "attendance exports",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("attendanceExports.html")
+			},
+		},
+		{
 			name: "Canvas import preview",
 			load: func() (*template.Template, error) {
 				return loadAdminTemplates("canvasPreview.html")

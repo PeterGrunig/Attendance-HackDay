@@ -8,12 +8,13 @@ import (
 )
 
 type IntegrationConnectionSummary struct {
-	ID            int64
-	ProviderKind  string
-	DisplayName   string
-	Status        string
-	Configuration json.RawMessage
-	UpdatedAt     time.Time
+	ID             int64
+	ProviderKind   string
+	ConnectionRole string
+	DisplayName    string
+	Status         string
+	Configuration  json.RawMessage
+	UpdatedAt      time.Time
 }
 
 type RosterMatchSnapshot struct {

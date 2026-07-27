@@ -215,6 +215,70 @@
   background: var(--admin-panel-soft);
 }
 
+.export-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 .8rem;
+}
+
+.export-adapter-empty {
+  padding: .8rem 0;
+  border-top: 1px solid var(--admin-line);
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.export-adapter-empty p {
+  margin: .3rem 0 0;
+  color: var(--admin-muted);
+}
+
+.export-section-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .8rem;
+}
+
+.export-section-heading h2,
+.export-section-heading p {
+  margin: 0;
+}
+
+.export-section-heading p,
+.export-section-heading > span {
+  color: var(--admin-muted);
+  font-size: .82rem;
+}
+
+.export-queue td small,
+.admin-form-card td small {
+  display: block;
+  margin-top: .15rem;
+  color: var(--admin-muted);
+}
+
+.export-error-cell {
+  max-width: 300px;
+  color: #7a3530;
+  overflow-wrap: anywhere;
+}
+
+.attendance-state-export_pending {
+  color: #725214;
+  background: #fff2cd;
+}
+
+.attendance-state-export_failed {
+  color: #8c2d2d;
+  background: #ffe5e5;
+}
+
+.attendance-state-correction_pending {
+  color: #633f83;
+  background: #f1e7f8;
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
@@ -846,5 +910,13 @@
 
   .attendance-table-wrap {
     overflow-x: auto;
+  }
+
+  .export-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-section-heading {
+    flex-direction: column;
   }
 }
