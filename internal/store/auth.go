@@ -23,6 +23,8 @@ func (s *SQLStore) FindUserByID(ctx context.Context, userID string) (domain.User
 
 func (s *SQLStore) findUser(ctx context.Context, column, value string) (domain.User, error) {
 	var user domain.User
+	// A pending Canvas account may carry the same contact email as an existing
+	// local account; usable local credentials always win that login lookup.
 	query := `
 		SELECT
 			UserID,
@@ -33,7 +35,7 @@ func (s *SQLStore) findUser(ctx context.Context, column, value string) (domain.U
 			COALESCE(ClassroomID, '')
 		FROM Users
 		WHERE ` + column + ` = $1
-		ORDER BY UserID
+		ORDER BY (PasswordHash = '!canvas-pending') ASC, UserID
 		LIMIT 1;
 	`
 	err := s.db.QueryRowContext(ctx, query, value).Scan(

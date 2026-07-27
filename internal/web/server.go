@@ -16,6 +16,7 @@ type AppStore interface {
 	AuthStore
 	StudentStore
 	TeacherStudentStore
+	CanvasIntegrationStore
 }
 
 func NewRouter(appStore AppStore) http.Handler {
@@ -26,6 +27,7 @@ func NewRouter(appStore AppStore) http.Handler {
 	authStore = appStore
 	studentStore = appStore
 	teacherStudentStore = appStore
+	canvasIntegrationStore = appStore
 	mux := http.NewServeMux()
 
 	staticFS, err := fs.Sub(view.FS, "static")
@@ -76,6 +78,14 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("POST /addStudent", RequireRole(http.HandlerFunc(studentCreateSubmitView), "admin", "teacher"))
 	mux.Handle("GET /userSettings", RequireRole(http.HandlerFunc(userSettingsView), "admin"))
 	mux.Handle("POST /userSettings/role", RequireRole(http.HandlerFunc(updateUserRoleView), "admin"))
+	mux.Handle("GET /admin/integrations/canvas", RequireRole(http.HandlerFunc(canvasIntegrationView), "admin"))
+	mux.Handle("POST /admin/integrations/canvas/connect", RequireRole(http.HandlerFunc(canvasConnect), "admin"))
+	mux.Handle("GET /admin/integrations/canvas/callback", RequireRole(http.HandlerFunc(canvasOAuthCallback), "admin"))
+	mux.Handle("POST /admin/integrations/canvas/disconnect", RequireRole(http.HandlerFunc(canvasDisconnect), "admin"))
+	mux.Handle("POST /admin/integrations/canvas/courses", RequireRole(http.HandlerFunc(canvasSelectCourses), "admin"))
+	mux.Handle("GET /admin/integrations/canvas/preview", RequireRole(http.HandlerFunc(canvasPreview), "admin"))
+	mux.Handle("POST /admin/integrations/canvas/sync", RequireRole(http.HandlerFunc(canvasSync), "admin"))
+	mux.Handle("POST /admin/integrations/canvas/import", RequireRole(http.HandlerFunc(canvasConfirmImport), "admin"))
 
 	return mux
 }

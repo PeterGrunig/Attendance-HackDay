@@ -42,7 +42,14 @@ func NewSQLStore(db *sql.DB, options ...SQLStoreOption) *SQLStore {
 func (s *SQLStore) ListClassrooms(ctx context.Context) ([]domain.Classroom, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT c.ID, c.Name, COALESCE(cm.UserID, ''), COALESCE(cm.MembershipRole, ''),
-			COALESCE(cm.IsPrimary, false)
+			COALESCE(cm.IsPrimary, false), COALESCE((
+				SELECT ic.ProviderKind
+				FROM ExternalEntityMappings eem
+				JOIN IntegrationConnections ic
+					ON ic.IntegrationConnectionID = eem.IntegrationConnectionID
+				WHERE eem.EntityKind = 'classroom' AND eem.LocalID = c.ID AND eem.Active = true
+				ORDER BY eem.UpdatedAt DESC LIMIT 1
+			), '')
 		FROM Classrooms AS c
 		LEFT JOIN ClassroomMemberships AS cm
 			ON cm.ClassroomID = c.ID AND cm.Active = true
@@ -62,16 +69,18 @@ func (s *SQLStore) ListClassrooms(ctx context.Context) ([]domain.Classroom, erro
 			userID      string
 			role        string
 			isPrimary   bool
+			managedBy   string
 		)
-		if err := rows.Scan(&classroomID, &name, &userID, &role, &isPrimary); err != nil {
+		if err := rows.Scan(&classroomID, &name, &userID, &role, &isPrimary, &managedBy); err != nil {
 			return nil, err
 		}
 
 		index, ok := classroomIndexes[classroomID]
 		if !ok {
 			classrooms = append(classrooms, domain.Classroom{
-				ID:   classroomID,
-				Name: name,
+				ID:        classroomID,
+				Name:      name,
+				ManagedBy: managedBy,
 			})
 			index = len(classrooms) - 1
 			classroomIndexes[classroomID] = index

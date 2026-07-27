@@ -18,6 +18,76 @@
   background: var(--admin-bg);
 }
 
+.admin-notice {
+  margin-bottom: 1rem;
+  padding: .8rem 1rem;
+  border-left: 4px solid var(--admin-green);
+  background: var(--admin-green-soft);
+}
+
+.admin-notice-error {
+  border-left-color: #a33b32;
+  background: #f8e9e7;
+}
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+
+.integration-actions form {
+  margin: 0;
+}
+
+.integration-status {
+  display: inline-block;
+  padding: .2rem .5rem;
+  border-radius: 999px;
+  color: var(--admin-muted);
+  background: var(--admin-panel-soft);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.integration-status-active {
+  color: var(--admin-green-dark);
+  background: var(--admin-green-soft);
+}
+
+.canvas-course-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .65rem;
+  margin-bottom: 1rem;
+}
+
+.canvas-course-list label {
+  display: flex;
+  gap: .65rem;
+  align-items: flex-start;
+  padding: .75rem;
+  border: 1px solid var(--admin-line);
+  background: var(--admin-panel-soft);
+}
+
+.canvas-course-list small {
+  display: block;
+  margin-top: .2rem;
+  color: var(--admin-muted);
+}
+
+.integration-confirm {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.integration-confirm p {
+  flex: 1;
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);

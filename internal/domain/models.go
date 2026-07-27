@@ -15,6 +15,7 @@ type Classroom struct {
 	TeacherID  string   `json:"teacher_id"`
 	TeacherIDs []string `json:"teacher_ids,omitempty"`
 	StudentIDs []string `json:"student_ids"`
+	ManagedBy  string   `json:"managed_by,omitempty"`
 }
 
 type Schedule struct {

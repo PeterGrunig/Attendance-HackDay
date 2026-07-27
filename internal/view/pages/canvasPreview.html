@@ -1,0 +1,62 @@
+{{define "content"}}
+<div class="admin-page-header">
+    <h1>Preview Canvas Import</h1>
+    <p>Confirm suggested matches before Attendance Quest changes any roster data.</p>
+</div>
+
+<div class="admin-form-card">
+    <h2>Import summary</h2>
+    <p>{{.ClassCount}} classes, {{.PeopleCount}} people, and {{.MembershipCount}} class memberships.</p>
+</div>
+
+<form method="POST" action="/admin/integrations/canvas/import">
+    <input type="hidden" name="proposal_token" value="{{.Token}}">
+
+    <div class="admin-form-card">
+        <h2>Classes</h2>
+        <table>
+            <thead><tr><th>Canvas class</th><th>SIS ID</th><th>Management</th></tr></thead>
+            <tbody>
+            {{range .Classes}}
+            <tr><td>{{.Name}}</td><td>{{if .SISID}}{{.SISID}}{{else}}—{{end}}</td><td>Canvas-managed</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-form-card">
+        <h2>Teachers and students</h2>
+        <p>Stored mappings and SIS IDs are automatic. Email and local-ID suggestions require your confirmation. Names are never used for matching.</p>
+        <table>
+            <thead><tr><th>Canvas person</th><th>Role</th><th>Email / SIS ID</th><th>Attendance Quest account</th></tr></thead>
+            <tbody>
+            {{range .People}}
+            <tr>
+                <td>{{.Person.Name}}</td>
+                <td>{{.Person.Role}}</td>
+                <td>{{if .Person.Email}}{{.Person.Email}}{{else}}—{{end}}{{if .Person.SISID}}<br><small>SIS: {{.Person.SISID}}</small>{{end}}</td>
+                <td>
+                    {{if .AutoMatched}}
+                    <span class="integration-status integration-status-active">Mapped to {{.LocalID}}</span>
+                    {{else}}
+                    <select name="person_{{.Person.ExternalID}}">
+                        <option value="new">Create pending account</option>
+                        {{if .SuggestedID}}<option value="{{.SuggestedID}}">Confirm {{.SuggestionKind}} match: {{.SuggestedID}}</option>{{end}}
+                    </select>
+                    {{end}}
+                </td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-form-card integration-confirm">
+        <p>Removed Canvas memberships will be archived. Users, credentials, attendance history, and local-only classes are preserved.</p>
+        <button class="admin-submit-btn" type="submit">Confirm roster import</button>
+        <a class="admin-nav-item" href="/admin/integrations/canvas?connection_id={{.ConnectionID}}">Cancel</a>
+    </div>
+</form>
+{{end}}
+
+{{template "base" .}}

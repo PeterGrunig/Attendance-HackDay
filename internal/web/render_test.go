@@ -82,6 +82,18 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 				return loadAdminTemplates("userSettings.html")
 			},
 		},
+		{
+			name: "Canvas integration",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("canvasIntegration.html")
+			},
+		},
+		{
+			name: "Canvas import preview",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("canvasPreview.html")
+			},
+		},
 	}
 
 	cssLink := regexp.MustCompile(`<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"`)

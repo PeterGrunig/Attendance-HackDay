@@ -16,7 +16,9 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - Manual coin adjustments are stored in `ManualCoinAdjustments` without creating transaction records.
 - The admin dashboard, User Settings, Add Student, Add Teacher, and classroom create/edit flows use PostgreSQL. `ClassroomMemberships` is the normalized roster source after `Seed_DataBase3.sql`; compatibility writes continue maintaining the legacy classroom columns and tables.
 - Teacher and admin dashboard scaffolding plus classroom management routes.
-- Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records. No external provider is connected yet and no integration routes are exposed.
+- Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
+- Admin-only Canvas OAuth and manual roster import for selected courses. Imports include classes, teachers, students, and memberships only; assignments, grades, submissions, course content, passwords, and Canvas student pages are excluded.
+- Canvas imports automatically reuse stored external/SIS mappings. Email and local-ID candidates require confirmation, names are never used for matching, new users receive pending local accounts, and removed imported memberships are archived without deleting users or attendance history.
 
 Some teacher/admin reporting and schedule-management flows are still in progress;
 see `todo.md` for the remaining project checklist.
@@ -28,6 +30,7 @@ see `todo.md` for the remaining project checklist.
 - `internal/store` contains all PostgreSQL data access, including atomic attendance rewards and shop purchases.
 - `internal/domain` contains persisted application models.
 - `internal/integrations` contains provider-neutral contracts, capability metadata, provider registration, and AES-GCM credential encryption.
+- `internal/integrations/canvas` contains the Canvas OAuth client and roster-only adapter.
 - `internal/view` contains embedded templates, static CSS, and images.
 
 PostgreSQL is the application's only runtime data store. The browser cookie contains an opaque token; its short-lived session record remains in application memory and references the SQL `Users.UserID`.
@@ -96,6 +99,19 @@ credential reads and writes remain disabled. Do not change or discard a key
 after credentials have been stored unless a future key-rotation process has
 re-encrypted those records.
 
+Canvas roster import additionally uses:
+
+- `CANVAS_CLIENT_ID`: the Canvas OAuth developer-key client ID.
+- `CANVAS_CLIENT_SECRET`: the matching developer-key secret.
+- `CANVAS_REDIRECT_URL`: the exact registered callback URL, normally
+  `http://localhost:4000/admin/integrations/canvas/callback` for local work.
+
+The Canvas URL and account ID are entered by an authorized Attendance Quest
+administrator. Access and refresh tokens are stored only through the encrypted
+integration credential boundary. Course selections are non-secret connection
+configuration. The admin manually previews and confirms every initial import
+and later synchronization from **Admin → Canvas Import**.
+
 
 ## Check Database in DBeaver
 
@@ -160,6 +176,7 @@ re-encrypted those records.
     docker exec -i attendance-postgres psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase3.sql
     ```
 
-The application does not apply `Seed_DataBase3.sql` automatically. Part 1 only
-adds the integration foundation; Canvas, SIS, and attendance-export adapters
-remain unimplemented.
+The application does not apply `Seed_DataBase3.sql` automatically. It must be
+applied before using Canvas roster import. Part 2 uses the existing Part 1
+tables and does not require an additional migration. Attendance export remains
+unimplemented.

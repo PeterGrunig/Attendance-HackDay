@@ -44,10 +44,11 @@ type AdminDashboardSummary struct {
 }
 
 type AdminClassroomView struct {
-	Name     string
-	ID       string
-	Teacher  AdminClassroomPerson
-	Students []AdminClassroomPerson
+	Name      string
+	ID        string
+	ManagedBy string
+	Teacher   AdminClassroomPerson
+	Students  []AdminClassroomPerson
 }
 
 type AdminClassroomPerson struct {
@@ -170,10 +171,11 @@ func buildAdminClassroomViews(classrooms []Classroom, users map[string]User) []A
 		}
 
 		views = append(views, AdminClassroomView{
-			Name:     classroom.Name,
-			ID:       classroom.ID,
-			Teacher:  adminClassroomPerson(classroom.TeacherID, users),
-			Students: students,
+			Name:      classroom.Name,
+			ID:        classroom.ID,
+			ManagedBy: classroom.ManagedBy,
+			Teacher:   adminClassroomPerson(classroom.TeacherID, users),
+			Students:  students,
 		})
 	}
 
@@ -671,7 +673,7 @@ func teacherAddStudent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "teacher student store is not configured", http.StatusInternalServerError)
 		return
 	}
-	
+
 	user, ok := authenticatedUser(r)
 	if !ok {
 		http.Error(w, "user not authenticated", http.StatusUnauthorized)
@@ -695,8 +697,6 @@ func teacherAddStudent(w http.ResponseWriter, r *http.Request) {
 	renderTeacher(w, "createStudent.html", data)
 
 }
-
-
 
 //This creates a student accoutn from the admin dash
 func createStudent(w http.ResponseWriter, r *http.Request) {
