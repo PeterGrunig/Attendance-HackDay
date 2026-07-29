@@ -19,6 +19,7 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - Teacher attendance approval for assigned classes, with admin access to every class. Student check-ins default the daily roster to present, missing check-ins default to absent, and each whole-class approval is stored as an immutable version. A later approval creates a correction-pending version without changing check-in rewards.
 - Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
 - Provider-neutral attendance export outbox with per-student acceptance, external record identifiers, correction support, deterministic idempotency identities, five bounded automatic attempts, and manual retry from **Admin → Attendance Exports**. Failed batches remain visibly unofficial.
+- Ed-Fi ODS/API attendance destination using OAuth 2.0 client credentials and exception-only daily attendance. Absences are safely upserted, accepted absence IDs are retained, and a correction to present deletes the corresponding Ed-Fi event.
 - Admin-only Canvas OAuth and manual roster import for selected courses. Imports include classes, teachers, students, and memberships only; assignments, grades, submissions, course content, passwords, and Canvas student pages are excluded.
 - Canvas imports automatically reuse stored external/SIS mappings. Email and local-ID candidates require confirmation, names are never used for matching, new users receive pending local accounts, and removed imported memberships are archived without deleting users or attendance history.
 
@@ -33,6 +34,7 @@ see `todo.md` for the remaining project checklist.
 - `internal/domain` contains persisted application models.
 - `internal/integrations` contains provider-neutral contracts, capability metadata, provider registration, and AES-GCM credential encryption.
 - `internal/integrations/canvas` contains the Canvas OAuth client and roster-only adapter.
+- `internal/integrations/edfi` contains the official daily-attendance destination adapter.
 - `internal/attendanceexport` orchestrates destination validation, durable outbox delivery, bounded retries, and provider-neutral response handling.
 - `internal/view` contains embedded templates, static CSS, and images.
 
@@ -131,10 +133,49 @@ Per-student responses and external record IDs are retained for later
 corrections. Provider, authentication, mapping, and student-level failures leave
 the batch in `export_failed`; an admin can inspect and manually retry it.
 
-No production attendance-destination adapter is currently registered, so the
-page intentionally reports that no receiving system is installed and no
-official attendance network calls occur. The existing `Seed_DataBase3.sql`
-tables support this pipeline; Part 4 adds no database migration.
+The Ed-Fi adapter is registered, but it makes no requests until an administrator
+supplies and validates a destination connection. The existing
+`Seed_DataBase3.sql` tables support this pipeline; Parts 4 and 5 add no database
+migration.
+
+### Ed-Fi official attendance setup
+
+Attendance Quest targets the current [Ed-Fi ODS/API](https://docs.ed-fi.org/reference/ed-fi-api/)
+daily `StudentSchoolAttendanceEvent` resource. Ed-Fi uses
+[OAuth 2.0 client credentials](https://docs.ed-fi.org/reference/ods-api/7.1/client-developers-guide/authentication/)
+and supports [exception-only attendance](https://docs.ed-fi.org/reference/data-exchange/data-standard/3/model-reference/student-attendance-domain/overview/),
+where an absence is an event and presence is represented by no absence event.
+That mode allows a present correction to safely delete the accepted absence by
+its Ed-Fi resource ID.
+
+From **Admin → Attendance Exports**, choose **Ed-Fi ODS/API** and configure:
+
+```json
+{
+  "base_url": "https://your-edfi-host.example/api",
+  "data_path": "/data/v3/ed-fi",
+  "session_name": "2026-2027 School Year",
+  "school_year": 2027
+}
+```
+
+Enter encrypted credential JSON using the API key and secret issued by the
+Ed-Fi platform administrator:
+
+```json
+{
+  "client_key": "replace-me",
+  "client_secret": "replace-me"
+}
+```
+
+The present mapping must be `exception-only`. The absent mapping must be the
+installation's complete AttendanceEventCategory descriptor URI, for example
+`uri://ed-fi.org/AttendanceEventCategoryDescriptor#Unexcused Absence`.
+Attendance Quest automatically reuses stored SIS IDs when possible, then opens
+the identifier mapping screen for schools, classes/sections, or students that
+still need an explicit Ed-Fi identifier. The connection cannot be enabled while
+any required identifier is missing.
 
 ## Check Database in DBeaver
 

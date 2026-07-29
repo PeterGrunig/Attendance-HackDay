@@ -10,6 +10,7 @@ import (
 	"github.com/PeterGrunig/Attendance-HackDay/internal/attendanceexport"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations/canvas"
+	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations/edfi"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/store"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/web"
 	"github.com/joho/godotenv"
@@ -41,6 +42,9 @@ func main() {
 	registry := integrations.NewProviderRegistry()
 	if err := registry.Register(canvasClient); err != nil {
 		log.Printf("Canvas provider registration failed: %v", err)
+	}
+	if err := registry.Register(edfi.New()); err != nil {
+		log.Printf("Ed-Fi provider registration failed: %v", err)
 	}
 	web.ConfigureCanvas(canvasClient)
 	sqlStore := store.NewSQLStore(db, storeOptions...)

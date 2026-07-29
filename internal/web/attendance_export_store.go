@@ -14,6 +14,10 @@ type AttendanceExportStore interface {
 	EnableAttendanceDestination(context.Context, int64) error
 	SetAttendanceDestinationStatus(context.Context, int64, string) error
 	ListAttendanceExportQueue(context.Context, int) ([]domain.AttendanceExportQueueItem, error)
+	SeedAttendanceDestinationMappings(context.Context, int64) error
+	ListAttendanceDestinationMappings(context.Context, int64) ([]domain.AttendanceDestinationMapping, error)
+	SetAttendanceDestinationMapping(context.Context, int64, domain.AttendanceDestinationMapping) error
+	CountMissingAttendanceDestinationMappings(context.Context, int64) (int, error)
 	AppendIntegrationAuditEvent(context.Context, domain.IntegrationAuditEvent) (int64, error)
 }
 

@@ -97,6 +97,8 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("POST /admin/integrations/attendance/validate", RequireRole(http.HandlerFunc(attendanceDestinationValidate), "admin"))
 	mux.Handle("POST /admin/integrations/attendance/disable", RequireRole(http.HandlerFunc(attendanceDestinationDisable), "admin"))
 	mux.Handle("POST /admin/integrations/attendance/retry", RequireRole(http.HandlerFunc(attendanceExportRetry), "admin"))
+	mux.Handle("GET /admin/integrations/attendance/mappings", RequireRole(http.HandlerFunc(attendanceDestinationMappingsView), "admin"))
+	mux.Handle("POST /admin/integrations/attendance/mappings", RequireRole(http.HandlerFunc(attendanceDestinationMappingsSave), "admin"))
 
 	return mux
 }

@@ -44,6 +44,21 @@ type attendanceExportPageData struct {
 	Error          string
 }
 
+type attendanceMappingPageData struct {
+	Title          string
+	HeaderTitle    string
+	HeaderSubtitle string
+	HeaderBadge    string
+	CSRFToken      string
+	ConnectionID   int64
+	ConnectionName string
+	ProviderKind   string
+	Mappings       []domain.AttendanceDestinationMapping
+	MissingCount   int
+	Message        string
+	Error          string
+}
+
 func attendanceExportView(w http.ResponseWriter, r *http.Request) {
 	data := attendanceExportPageData{
 		Title: "Attendance Exports", HeaderTitle: "Attendance Exports",
@@ -157,6 +172,19 @@ func attendanceDestinationCreate(w http.ResponseWriter, r *http.Request) {
 		redirectExports(w, r, "", integrationMessage(err))
 		return
 	}
+	if err := attendanceExportStore.SeedAttendanceDestinationMappings(r.Context(), connectionID); err != nil {
+		log.Printf("attendance destination SIS mapping seed failed: connection_id=%d error=%v", connectionID, err)
+	}
+	missing, err := attendanceExportStore.CountMissingAttendanceDestinationMappings(r.Context(), connectionID)
+	if err != nil {
+		redirectExports(w, r, "", "Destination was saved but mappings could not be checked.")
+		return
+	}
+	if missing > 0 {
+		appendAttendanceExportAudit(r, user.UserID, "attendance.destination_created", "integration_connection", fmt.Sprint(connectionID), map[string]any{"provider": providerKind, "missing_mappings": missing})
+		redirectAttendanceMappings(w, r, connectionID, "Destination validated. Complete the remaining identifiers before enabling it.", "")
+		return
+	}
 	if err := attendanceExportStore.EnableAttendanceDestination(r.Context(), connectionID); err != nil {
 		_ = attendanceExportStore.SetAttendanceDestinationStatus(r.Context(), connectionID, "error")
 		redirectExports(w, r, "", "Destination was saved but could not be enabled.")
@@ -189,6 +217,18 @@ func attendanceDestinationValidate(w http.ResponseWriter, r *http.Request) {
 		_ = attendanceExportStore.SetAttendanceDestinationStatus(r.Context(), connectionID, "error")
 		appendAttendanceExportAudit(r, user.UserID, "attendance.destination_validation_failed", "integration_connection", fmt.Sprint(connectionID), map[string]any{"error": err.Error()})
 		redirectExports(w, r, "", integrationMessage(err))
+		return
+	}
+	if err := attendanceExportStore.SeedAttendanceDestinationMappings(r.Context(), connectionID); err != nil {
+		log.Printf("attendance destination SIS mapping seed failed: connection_id=%d error=%v", connectionID, err)
+	}
+	missing, err := attendanceExportStore.CountMissingAttendanceDestinationMappings(r.Context(), connectionID)
+	if err != nil {
+		redirectExports(w, r, "", "Destination validated but mappings could not be checked.")
+		return
+	}
+	if missing > 0 {
+		redirectAttendanceMappings(w, r, connectionID, "Connection is healthy. Complete the remaining identifiers before enabling it.", "")
 		return
 	}
 	if err := attendanceExportStore.EnableAttendanceDestination(r.Context(), connectionID); err != nil {
@@ -238,6 +278,128 @@ func attendanceExportRetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirectExports(w, r, "Manual attendance export completed.", "")
+}
+
+func attendanceDestinationMappingsView(w http.ResponseWriter, r *http.Request) {
+	connectionID, err := strconv.ParseInt(r.URL.Query().Get("connection_id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid connection", http.StatusBadRequest)
+		return
+	}
+	connection, _, err := attendanceExportStore.LoadIntegrationConnection(r.Context(), connectionID)
+	if err != nil || connection.Role != integrations.ConnectionRoleAttendanceDestination {
+		http.Error(w, "attendance destination not found", http.StatusNotFound)
+		return
+	}
+	token, err := getCSRFToken(r)
+	if err != nil {
+		http.Error(w, "could not secure mapping form", http.StatusInternalServerError)
+		return
+	}
+	if err := attendanceExportStore.SeedAttendanceDestinationMappings(r.Context(), connectionID); err != nil {
+		log.Printf("attendance destination SIS mapping seed failed: connection_id=%d error=%v", connectionID, err)
+	}
+	mappings, err := attendanceExportStore.ListAttendanceDestinationMappings(r.Context(), connectionID)
+	if err != nil {
+		http.Error(w, "could not load destination mappings", http.StatusInternalServerError)
+		return
+	}
+	missing := 0
+	for _, mapping := range mappings {
+		if mapping.ExternalID == "" {
+			missing++
+		}
+	}
+	renderAdmin(w, "attendanceMappings.html", attendanceMappingPageData{
+		Title: "Attendance Identifier Mappings", HeaderTitle: "Attendance Exports",
+		HeaderSubtitle: "Match Attendance Quest records to official Ed-Fi identifiers.",
+		HeaderBadge:    "Admin View", CSRFToken: token,
+		ConnectionID: connectionID, ConnectionName: connection.DisplayName,
+		ProviderKind: connection.ProviderKind, Mappings: mappings, MissingCount: missing,
+		Message: r.URL.Query().Get("msg"), Error: r.URL.Query().Get("error"),
+	})
+}
+
+// attendanceDestinationMappingsSave validates the adapter-specific identifier
+// shape, saves every supplied mapping, and enables only a complete destination.
+func attendanceDestinationMappingsSave(w http.ResponseWriter, r *http.Request) {
+	user, _ := authenticatedUser(r)
+	if !parseSecureAdminForm(w, r) {
+		return
+	}
+	if attendanceRegistry == nil || attendanceExporter == nil {
+		http.Error(w, "attendance export service is unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	connectionID, err := strconv.ParseInt(r.PostFormValue("connection_id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid connection", http.StatusBadRequest)
+		return
+	}
+	connection, _, err := attendanceExportStore.LoadIntegrationConnection(r.Context(), connectionID)
+	if err != nil || connection.Role != integrations.ConnectionRoleAttendanceDestination {
+		http.Error(w, "attendance destination not found", http.StatusNotFound)
+		return
+	}
+	provider, err := attendanceRegistry.Get(connection.ProviderKind)
+	if err != nil {
+		redirectAttendanceMappings(w, r, connectionID, "", integrationMessage(err))
+		return
+	}
+	validator, _ := provider.(integrations.DestinationMappingValidator)
+	kinds := r.PostForm["entity_kind"]
+	localIDs := r.PostForm["local_id"]
+	localNames := r.PostForm["local_name"]
+	sisIDs := r.PostForm["sis_id"]
+	externalIDs := r.PostForm["external_id"]
+	if len(kinds) != len(localIDs) || len(kinds) != len(localNames) ||
+		len(kinds) != len(sisIDs) || len(kinds) != len(externalIDs) {
+		http.Error(w, "incomplete mapping form", http.StatusBadRequest)
+		return
+	}
+	for index, externalID := range externalIDs {
+		externalID = strings.TrimSpace(externalID)
+		if externalID == "" {
+			continue
+		}
+		if validator != nil {
+			if err := validator.ValidateExternalMapping(kinds[index], externalID); err != nil {
+				redirectAttendanceMappings(w, r, connectionID, "", integrationMessage(err))
+				return
+			}
+		}
+		mapping := domain.AttendanceDestinationMapping{
+			EntityKind: kinds[index], LocalID: localIDs[index],
+			LocalName: localNames[index], SISID: sisIDs[index], ExternalID: externalID,
+		}
+		if err := attendanceExportStore.SetAttendanceDestinationMapping(r.Context(), connectionID, mapping); err != nil {
+			log.Printf("attendance destination mapping save failed: connection_id=%d kind=%q local_id=%q error=%v",
+				connectionID, mapping.EntityKind, mapping.LocalID, err)
+			redirectAttendanceMappings(w, r, connectionID, "", "Could not save identifier mappings.")
+			return
+		}
+	}
+	missing, err := attendanceExportStore.CountMissingAttendanceDestinationMappings(r.Context(), connectionID)
+	if err != nil {
+		redirectAttendanceMappings(w, r, connectionID, "", "Could not verify identifier mappings.")
+		return
+	}
+	appendAttendanceExportAudit(r, user.UserID, "attendance.destination_mappings_updated", "integration_connection", fmt.Sprint(connectionID), map[string]any{"missing_mappings": missing})
+	if missing > 0 {
+		redirectAttendanceMappings(w, r, connectionID, fmt.Sprintf("Mappings saved. %d identifiers still need attention.", missing), "")
+		return
+	}
+	if err := attendanceExporter.ValidateDestination(r.Context(), connection); err != nil {
+		_ = attendanceExportStore.SetAttendanceDestinationStatus(r.Context(), connectionID, "error")
+		redirectAttendanceMappings(w, r, connectionID, "", integrationMessage(err))
+		return
+	}
+	if err := attendanceExportStore.EnableAttendanceDestination(r.Context(), connectionID); err != nil {
+		redirectAttendanceMappings(w, r, connectionID, "", "Mappings are complete but the destination could not be enabled.")
+		return
+	}
+	appendAttendanceExportAudit(r, user.UserID, "attendance.destination_enabled", "integration_connection", fmt.Sprint(connectionID), map[string]any{"provider": connection.ProviderKind})
+	redirectExports(w, r, "Identifier mappings complete. Attendance destination enabled.", "")
 }
 
 func parseSecureAdminForm(w http.ResponseWriter, r *http.Request) bool {
@@ -292,4 +454,15 @@ func redirectExports(w http.ResponseWriter, r *http.Request, message, errorMessa
 		target += "?" + encoded
 	}
 	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+func redirectAttendanceMappings(w http.ResponseWriter, r *http.Request, connectionID int64, message, errorMessage string) {
+	values := url.Values{"connection_id": {strconv.FormatInt(connectionID, 10)}}
+	if message != "" {
+		values.Set("msg", message)
+	}
+	if errorMessage != "" {
+		values.Set("error", errorMessage)
+	}
+	http.Redirect(w, r, "/admin/integrations/attendance/mappings?"+values.Encode(), http.StatusSeeOther)
 }

@@ -140,6 +140,14 @@ type AttendanceExportEntryResult struct {
 	Message          string
 }
 
+type AttendanceDestinationMapping struct {
+	EntityKind string
+	LocalID    string
+	LocalName  string
+	SISID      string
+	ExternalID string
+}
+
 type IntegrationAuditEvent struct {
 	ID          int64
 	ActorUserID string

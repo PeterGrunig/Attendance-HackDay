@@ -28,20 +28,28 @@
             </div>
             <div class="form-group">
                 <label for="present-code">Present code</label>
-                <input id="present-code" name="present_code" required>
+                <input id="present-code" name="present_code" value="exception-only" required>
             </div>
             <div class="form-group">
                 <label for="absent-code">Absent code</label>
-                <input id="absent-code" name="absent_code" required>
+                <input id="absent-code" name="absent_code" value="uri://ed-fi.org/AttendanceEventCategoryDescriptor#Unexcused Absence" required>
             </div>
         </div>
         <div class="form-group">
             <label for="provider-configuration">Non-secret provider configuration</label>
-            <textarea id="provider-configuration" name="provider_configuration" rows="4">{}</textarea>
+            <textarea id="provider-configuration" name="provider_configuration" rows="7">{
+  "base_url": "https://your-edfi-host.example/api",
+  "data_path": "/data/v3/ed-fi",
+  "session_name": "2026-2027 School Year",
+  "school_year": 2027
+}</textarea>
         </div>
         <div class="form-group">
             <label for="destination-credentials">Credential JSON</label>
-            <textarea id="destination-credentials" name="credentials" rows="4">{}</textarea>
+            <textarea id="destination-credentials" name="credentials" rows="5">{
+  "client_key": "",
+  "client_secret": ""
+}</textarea>
             <small>Credentials cross the encryption boundary immediately and are never stored as plaintext.</small>
         </div>
         <button class="admin-submit-btn" type="submit">Validate and enable</button>
@@ -76,6 +84,7 @@
                                 <input type="hidden" name="connection_id" value="{{.ID}}">
                                 <button class="admin-submit-btn" type="submit">Validate</button>
                             </form>
+                            <a class="admin-nav-item" href="/admin/integrations/attendance/mappings?connection_id={{.ID}}">Identifiers</a>
                             {{if eq .Status "active"}}
                             <form method="POST" action="/admin/integrations/attendance/disable">
                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">

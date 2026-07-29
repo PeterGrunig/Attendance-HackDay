@@ -171,3 +171,7 @@ type AttendanceDestination interface {
 	ValidateAttendanceCodes(context.Context, Connection, AttendanceCodeMapping) error
 	UpsertAttendanceBatch(context.Context, Connection, AttendanceBatch) (DeliveryResult, error)
 }
+
+type DestinationMappingValidator interface {
+	ValidateExternalMapping(entityKind, externalID string) error
+}
