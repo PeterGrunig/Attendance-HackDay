@@ -24,15 +24,10 @@ func studentView(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	status, message, canMark := getTodayAttendanceState(state.Attendance, now)
 	avatar := savedAvatarConfig(state.AvatarConfig, state.OwnedShopItemIDs)
-	weekStart := studentDashboardWeekStart(r, now)
-	weekLabel, assignmentDays := buildWeeklyAssignmentSchedule(state.WeeklyAssignments, weekStart, now)
 	data := PageData{
 		Title: "Student Dashboard", Username: state.User.Name, AvatarImage: getAvatarImage(avatar),
 		AvatarSummary: avatarSummary(avatar), AvatarPreview: buildAvatarPreview(avatar), Coins: state.CoinBalance,
 		AttendanceStatus: status, AttendanceMessage: message, CanMarkAttendance: canMark,
-		CurrentWeekLabel: weekLabel, WeeklyAssignmentDays: assignmentDays,
-		PreviousWeekURL:    studentDashboardWeekURL(weekStart.AddDate(0, 0, -7)),
-		NextWeekURL:        studentDashboardWeekURL(weekStart.AddDate(0, 0, 7)),
 		UpcomingDoubleDays: getUpcomingDoubleDays(state.Schedules),
 		ActiveNav:          "home", UseStudentCSS: true,
 		ThemeBackgroundOptions: ownedThemeBackgroundOptionViews(state.OwnedShopItemIDs),
@@ -103,76 +98,6 @@ func getTodayAttendanceState(attendance AttendanceRecord, now time.Time) (status
 		}
 	}
 	return "Not marked yet", "Tap Mark Attendance to earn coins.", true
-}
-
-// studentDashboardWeekStart normalizes a requested dashboard week to Sunday,
-// falling back to the current server-local week for missing or invalid input.
-func studentDashboardWeekStart(r *http.Request, now time.Time) time.Time {
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	requestedDate := strings.TrimSpace(r.URL.Query().Get("week"))
-	if requestedDate == "" {
-		return today.AddDate(0, 0, -int(today.Weekday()))
-	}
-
-	parsedDate, err := time.ParseInLocation("2006-01-02", requestedDate, now.Location())
-	if err != nil {
-		return today.AddDate(0, 0, -int(today.Weekday()))
-	}
-	return parsedDate.AddDate(0, 0, -int(parsedDate.Weekday()))
-}
-
-func studentDashboardWeekURL(weekStart time.Time) string {
-	return "/studentDashboard?week=" + url.QueryEscape(weekStart.Format("2006-01-02"))
-}
-
-// buildWeeklyAssignmentSchedule places recurring SQL templates on the selected
-// Sunday-through-Saturday week while highlighting the real current date.
-func buildWeeklyAssignmentSchedule(assignments []domain.WeeklyAssignmentTemplate, weekStart, now time.Time) (string, []WeeklyScheduleDayView) {
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	weekEnd := weekStart.AddDate(0, 0, 6)
-	days := make([]WeeklyScheduleDayView, 7)
-
-	for index := range days {
-		date := weekStart.AddDate(0, 0, index)
-		days[index] = WeeklyScheduleDayView{
-			DayName:   date.Weekday().String(),
-			DateLabel: date.Format("Jan 2"),
-			DateISO:   date.Format("2006-01-02"),
-			IsToday:   date.Equal(today),
-		}
-	}
-
-	for _, assignment := range assignments {
-		if assignment.DueWeekday < 0 || assignment.DueWeekday >= len(days) {
-			continue
-		}
-		days[assignment.DueWeekday].Assignments = append(days[assignment.DueWeekday].Assignments, WeeklyAssignmentView{
-			Subject: assignment.Subject,
-			Title:   assignment.Title,
-			DueTime: formatAssignmentDueTime(assignment.DueTime),
-		})
-	}
-
-	return formatCurrentWeekLabel(weekStart, weekEnd), days
-}
-
-func formatCurrentWeekLabel(start, end time.Time) string {
-	switch {
-	case start.Year() != end.Year():
-		return start.Format("January 2, 2006") + "–" + end.Format("January 2, 2006")
-	case start.Month() != end.Month():
-		return start.Format("January 2") + "–" + end.Format("January 2, 2006")
-	default:
-		return start.Format("January 2") + "–" + end.Format("2, 2006")
-	}
-}
-
-func formatAssignmentDueTime(value string) string {
-	dueTime, err := time.Parse("15:04", value)
-	if err != nil {
-		return value
-	}
-	return dueTime.Format("3:04 PM")
 }
 
 func getUpcomingDoubleDays(schedules []Schedule) []DoubleDayView {

@@ -306,8 +306,8 @@ func (s *SQLStore) ApproveAttendance(ctx context.Context, request domain.Attenda
 		return domain.AttendanceBatch{}, err
 	}
 
-	log.Printf("attendance class approved: actor_user_id=%q actor_role=%q classroom_id=%q date=%s batch_id=%d version=%d state=%q students=%d",
-		request.ActorUserID, request.ActorRole, request.ClassroomID, request.Date.Format("2006-01-02"),
+	log.Printf("attendance approval persisted: event_type=%q actor_user_id=%q actor_role=%q classroom_id=%q date=%s batch_id=%d version=%d state=%q students=%d",
+		eventType, request.ActorUserID, request.ActorRole, request.ClassroomID, request.Date.Format("2006-01-02"),
 		batchID, version, state, len(entries))
 	return domain.AttendanceBatch{
 		ID:             batchID,

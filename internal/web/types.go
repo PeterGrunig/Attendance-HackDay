@@ -14,8 +14,6 @@ type CoinTransaction = domain.CoinTransaction
 type AttendanceRecord = domain.AttendanceRecord
 
 type PageData = viewmodel.PageData
-type WeeklyAssignmentView = viewmodel.WeeklyAssignmentView
-type WeeklyScheduleDayView = viewmodel.WeeklyScheduleDayView
 type DoubleDayView = viewmodel.DoubleDayView
 type ShopItemView = viewmodel.ShopItemView
 type ThemeBackgroundOptionView = viewmodel.ThemeBackgroundOptionView

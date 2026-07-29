@@ -22,21 +22,14 @@ var (
 	ErrInsufficientCoins       = errors.New("insufficient coins")
 )
 
-// LoadStudentDashboardState loads the shared student data, classroom schedule,
-// and recurring assignment templates needed by the dashboard.
+// LoadStudentDashboardState loads attendance, rewards, avatar, and classroom
+// schedule data needed by the elementary student dashboard.
 func (s *SQLStore) LoadStudentDashboardState(ctx context.Context, user domain.User) (domain.StudentState, error) {
-	state, err := s.loadStudentPageState(ctx, user, true, false)
-	if err != nil {
-		return domain.StudentState{}, err
-	}
-	if err := s.loadWeeklyAssignmentTemplates(ctx, &state); err != nil {
-		return domain.StudentState{}, err
-	}
-	return state, nil
+	return s.loadStudentPageState(ctx, user, true, false)
 }
 
 // LoadStudentAttendanceState loads schedule data needed to calculate an
-// attendance reward without fetching dashboard-only assignment templates.
+// attendance reward.
 func (s *SQLStore) LoadStudentAttendanceState(ctx context.Context, user domain.User) (domain.StudentState, error) {
 	return s.loadStudentPageState(ctx, user, true, false)
 }
@@ -154,38 +147,6 @@ func (s *SQLStore) loadSchedules(ctx context.Context, state *domain.StudentState
 			return err
 		}
 		state.Schedules = append(state.Schedules, schedule)
-	}
-	return rows.Err()
-}
-
-// loadWeeklyAssignmentTemplates reads the recurring classroom assignments used
-// to build the student's current Sunday-through-Saturday dashboard calendar.
-func (s *SQLStore) loadWeeklyAssignmentTemplates(ctx context.Context, state *domain.StudentState) error {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ClassroomID, DueWeekday, Subject, Title,
-			TO_CHAR(DueTime, 'HH24:MI'), DisplayOrder
-		FROM WeeklyAssignmentTemplates
-		WHERE ClassroomID = $1
-		ORDER BY DueWeekday, DisplayOrder, DueTime, Title;
-	`, state.User.ClassroomID)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var assignment domain.WeeklyAssignmentTemplate
-		if err := rows.Scan(
-			&assignment.ClassroomID,
-			&assignment.DueWeekday,
-			&assignment.Subject,
-			&assignment.Title,
-			&assignment.DueTime,
-			&assignment.DisplayOrder,
-		); err != nil {
-			return err
-		}
-		state.WeeklyAssignments = append(state.WeeklyAssignments, assignment)
 	}
 	return rows.Err()
 }

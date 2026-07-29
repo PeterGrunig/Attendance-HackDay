@@ -26,17 +26,6 @@ type Schedule struct {
 	DoubleDay   bool   `json:"double_day"`  // true if this schedule is a double day
 }
 
-// WeeklyAssignmentTemplate describes a classroom assignment that recurs on the
-// same weekday while the dashboard derives its concrete date for each week.
-type WeeklyAssignmentTemplate struct {
-	ClassroomID  string
-	DueWeekday   int
-	Subject      string
-	Title        string
-	DueTime      string
-	DisplayOrder int
-}
-
 type ShopItem struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -71,12 +60,11 @@ type AttendanceRecord struct {
 // StudentState contains the SQL-backed data shared by the student dashboard,
 // shop, and avatar pages for one authenticated student.
 type StudentState struct {
-	User              User
-	CoinBalance       int
-	Attendance        AttendanceRecord
-	Schedules         []Schedule
-	WeeklyAssignments []WeeklyAssignmentTemplate
-	ShopItems         []ShopItem
-	OwnedShopItemIDs  []string
-	AvatarConfig      *AvatarConfig
+	User             User
+	CoinBalance      int
+	Attendance       AttendanceRecord
+	Schedules        []Schedule
+	ShopItems        []ShopItem
+	OwnedShopItemIDs []string
+	AvatarConfig     *AvatarConfig
 }

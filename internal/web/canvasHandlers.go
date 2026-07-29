@@ -339,6 +339,8 @@ func canvasConfirmImport(w http.ResponseWriter, r *http.Request) {
 	}
 	message := fmt.Sprintf("Canvas import complete: %d classes, %d new accounts, %d memberships.",
 		result.ClassesCreated, result.UsersCreated, result.MembershipsImported)
+	log.Printf("Canvas roster import completed: connection_id=%d admin_user_id=%q classes_created=%d users_created=%d memberships_imported=%d",
+		flow.Proposal.ConnectionID, user.UserID, result.ClassesCreated, result.UsersCreated, result.MembershipsImported)
 	http.Redirect(w, r, "/admin/integrations/canvas?connection_id="+strconv.FormatInt(flow.Proposal.ConnectionID, 10)+"&msg="+url.QueryEscape(message), http.StatusSeeOther)
 }
 

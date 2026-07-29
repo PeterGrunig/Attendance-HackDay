@@ -7,8 +7,7 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 ## Current Capabilities
 
 - SQL-backed login with in-memory session tokens and role-aware routing.
-- SQL-backed student dashboard with attendance status, coin balance, the current avatar, and a Sunday-through-Saturday assignment calendar.
-- Classroom assignment templates in `WeeklyAssignmentTemplates` recur by weekday; the dashboard derives their due dates for the current server-local week on each request. This is proof-of-concept mock data, not an assignment editing or completion workflow.
+- SQL-backed student dashboard focused on attendance status, rewards, the current avatar, and upcoming double-reward days.
 - Student shop with SQL-backed catalog, ownership, coin validation, and atomic purchases.
 - Avatar customization with Gerald as the free base, purchased character and cosmetic unlocks, layered visual preview, and SQL-backed saves.
 - Student pages include persistent light/dark controls, free background colors, unlocked special background themes, and a coin shop where every base avatar except Gerald costs 10 coins.
@@ -25,6 +24,10 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 
 Some teacher/admin reporting and schedule-management flows are still in progress;
 see `todo.md` for the remaining project checklist.
+
+See [Integration Architecture and Operations](docs/integrations.md) for provider
+design, Canvas and Ed-Fi setup, encryption, approval, retry, logging, and adapter
+extension guidance.
 
 ## Codebase Map
 
@@ -68,9 +71,6 @@ To manually add or subtract coins, insert or update the student's amount in
 `ManualCoinAdjustments`. That amount is added to the starting balance and
 the sum of `Transactions`.
 
-Added CodeQL
-
-
 ## Database setup
 
 1. Start the PostgreSQL container. The Compose environment creates the
@@ -95,87 +95,14 @@ precedence over `.env`; do not deploy the local `.env` file. If the application
 is added to this Compose network later, use `db:5432` as its database host and
 port instead of `localhost:5433`.
 
-So basically, we will set up the database with supabase. They will give the database URL to us, which we will store in a secrate manager. Then when we host it, we will configure the environement variables to point to our secrate.
+For hosted deployments, store `DATABASE_URL` and integration secrets in the
+hosting platform's secret manager.
 
-`INTEGRATION_CREDENTIAL_KEY` optionally enables encrypted provider credential
-storage. Set it to a base64-encoded 32-byte AES-256 key. The main application
-continues to start when the value is absent or invalid, but integration
-credential reads and writes remain disabled. Do not change or discard a key
-after credentials have been stored unless a future key-rotation process has
-re-encrypted those records.
-
-Canvas roster import additionally uses:
-
-- `CANVAS_CLIENT_ID`: the Canvas OAuth developer-key client ID.
-- `CANVAS_CLIENT_SECRET`: the matching developer-key secret.
-- `CANVAS_REDIRECT_URL`: the exact registered callback URL, normally
-  `http://localhost:4000/admin/integrations/canvas/callback` for local work.
-
-The Canvas URL and account ID are entered by an authorized Attendance Quest
-administrator. Access and refresh tokens are stored only through the encrypted
-integration credential boundary. Course selections are non-secret connection
-configuration. The admin manually previews and confirms every initial import
-and later synchronization from **Admin → Canvas Import**.
-
-
-### Attendance destination framework
-
-Attendance destinations are independent from roster-source connections. A
-destination adapter must advertise attendance writing plus safe upsert or
-correction support, validate its connection, and validate mappings for the
-local `present` and `absent` statuses before the admin can enable it.
-
-Approved batches use `AttendanceBatches` as a durable outbox. The worker checks
-up to 20 batches every 15 seconds and makes at most five automatic attempts with
-bounded exponential backoff. Idempotency identities include the destination,
-external school, class, school date, external student, and batch version.
-Per-student responses and external record IDs are retained for later
-corrections. Provider, authentication, mapping, and student-level failures leave
-the batch in `export_failed`; an admin can inspect and manually retry it.
-
-The Ed-Fi adapter is registered, but it makes no requests until an administrator
-supplies and validates a destination connection. The existing
-`Seed_DataBase3.sql` tables support this pipeline; Parts 4 and 5 add no database
-migration.
-
-### Ed-Fi official attendance setup
-
-Attendance Quest targets the current [Ed-Fi ODS/API](https://docs.ed-fi.org/reference/ed-fi-api/)
-daily `StudentSchoolAttendanceEvent` resource. Ed-Fi uses
-[OAuth 2.0 client credentials](https://docs.ed-fi.org/reference/ods-api/7.1/client-developers-guide/authentication/)
-and supports [exception-only attendance](https://docs.ed-fi.org/reference/data-exchange/data-standard/3/model-reference/student-attendance-domain/overview/),
-where an absence is an event and presence is represented by no absence event.
-That mode allows a present correction to safely delete the accepted absence by
-its Ed-Fi resource ID.
-
-From **Admin → Attendance Exports**, choose **Ed-Fi ODS/API** and configure:
-
-```json
-{
-  "base_url": "https://your-edfi-host.example/api",
-  "data_path": "/data/v3/ed-fi",
-  "session_name": "2026-2027 School Year",
-  "school_year": 2027
-}
-```
-
-Enter encrypted credential JSON using the API key and secret issued by the
-Ed-Fi platform administrator:
-
-```json
-{
-  "client_key": "replace-me",
-  "client_secret": "replace-me"
-}
-```
-
-The present mapping must be `exception-only`. The absent mapping must be the
-installation's complete AttendanceEventCategory descriptor URI, for example
-`uri://ed-fi.org/AttendanceEventCategoryDescriptor#Unexcused Absence`.
-Attendance Quest automatically reuses stored SIS IDs when possible, then opens
-the identifier mapping screen for schools, classes/sections, or students that
-still need an explicit Ed-Fi identifier. The connection cannot be enabled while
-any required identifier is missing.
+`INTEGRATION_CREDENTIAL_KEY` enables encrypted provider credentials; Canvas
+OAuth also uses `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and
+`CANVAS_REDIRECT_URL`. The core application can start without these values, but
+integration credential operations remain unavailable. See the
+[integration runbook](docs/integrations.md) before connecting Canvas or Ed-Fi.
 
 ## Check Database in DBeaver
 
@@ -213,7 +140,9 @@ any required identifier is missing.
     docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase.sql
     ```
 
-3. Apply the idempotent delta seed for the latest student records, image path metadata, and recurring weekly assignment templates. This includes the final records migrated from the retired JSON store.
+3. Apply the idempotent delta seed for the latest student, shop, avatar, and
+   image-path records. This includes the final records migrated from the
+   retired JSON store.
 
     ```powershell
     Get-Content -Raw .\Seed_DataBase2.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
@@ -241,7 +170,6 @@ any required identifier is missing.
     ```
 
 The application does not apply `Seed_DataBase3.sql` automatically. It must be
-applied before using Canvas roster import or teacher attendance approval. Parts
-2 and 3 use the existing Part 1 tables and do not require another migration.
-Part 3 finalizes attendance locally only; export to an official external system
-remains unimplemented.
+applied before deploying the updated membership, Canvas import, teacher
+approval, or attendance-export store code. Canvas, approval, outbox, and Ed-Fi
+support use these existing integration tables and require no later migration.

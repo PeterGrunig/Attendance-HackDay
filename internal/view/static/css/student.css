@@ -1698,163 +1698,6 @@ html[data-student-mode="light"] .bottombar {
   font-weight: 400;
 }
 
-.weekly-schedule-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.weekly-schedule-header h3,
-.weekly-schedule-header p {
-  margin: 0;
-}
-
-.weekly-schedule-header p {
-  color: var(--student-muted);
-  font-weight: 800;
-}
-
-.weekly-schedule-nav {
-  display: flex;
-  gap: .45rem;
-  margin-left: auto;
-}
-
-.weekly-schedule-nav a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  background: var(--student-surface-strong);
-  color: var(--student-ink);
-  font-size: 1.25rem;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.weekly-schedule-nav a:hover,
-.weekly-schedule-nav a:focus-visible {
-  border-color: var(--student-cyan);
-  color: var(--student-cyan);
-}
-
-.weekly-schedule-scroll {
-  overflow-x: visible;
-  padding-bottom: .35rem;
-}
-
-.weekly-schedule-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  background: var(--student-surface-strong);
-}
-
-.weekly-day {
-  min-width: 0;
-  min-height: 220px;
-  padding: .75rem;
-  border-right: 1px solid var(--student-line);
-}
-
-.weekly-day:last-child {
-  border-right: 0;
-}
-
-.weekly-day.is-today {
-  background: color-mix(in srgb, var(--student-bg-low) 42%, transparent);
-  box-shadow: inset 0 4px 0 var(--student-green);
-}
-
-.weekly-day > header {
-  display: grid;
-  gap: .2rem;
-  padding-bottom: .65rem;
-  border-bottom: 1px solid var(--student-line);
-}
-
-.weekly-day > header strong {
-  color: var(--student-cyan);
-  font-family: var(--student-font-display);
-  font-weight: 400;
-}
-
-.weekly-day > header time,
-.weekly-day-empty,
-.weekly-assignment small {
-  color: var(--student-muted);
-}
-
-.weekly-assignment-list {
-  display: grid;
-  gap: .6rem;
-  margin-top: .75rem;
-}
-
-.weekly-assignment {
-  display: grid;
-  min-width: 0;
-  gap: .25rem;
-  padding: .6rem;
-  border-left: 3px solid var(--student-purple);
-  border-radius: 0 6px 6px 0;
-  background: var(--student-surface-soft);
-}
-
-.weekly-assignment span {
-  color: var(--student-purple);
-  font-size: .68rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.weekly-assignment strong {
-  color: var(--student-ink);
-  font-size: .82rem;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.weekly-assignment small {
-  font-size: .72rem;
-  font-weight: 700;
-}
-
-.weekly-day-empty {
-  margin: .75rem 0 0;
-  font-size: .78rem;
-}
-
-@media (max-width: 900px) {
-  .weekly-schedule-scroll {
-    overflow-x: auto;
-  }
-
-  .weekly-schedule-grid {
-    min-width: 840px;
-  }
-}
-
-@media (max-width: 720px) {
-  .weekly-schedule-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .weekly-schedule-nav {
-    align-self: flex-end;
-  }
-}
-
 .double-day-badge,
 .shop-owned-item,
 .avatar-lock {
@@ -2193,9 +2036,6 @@ html[data-student-mode="light"] .avatar-cosmetic-image {
     grid-column: 1 / -1;
   }
 
-  .dashboard-container .weekly-assignment-schedule {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 720px) {
@@ -2667,31 +2507,6 @@ html[data-student-mode="light"] .theme-panel-menu .theme-special-swatches button
   margin: 0;
 }
 
-.sidebar-canvas-btn {
-  width: 100%;
-  min-width: 0;
-  min-height: 3rem;
-  padding: 0.65rem;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  color: var(--student-ink);
-  background: var(--student-surface-strong);
-  font-size: 0.85rem;
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-.sidebar-canvas-icon {
-  width: 1.4rem;
-  height: 1.4rem;
-}
-
-.sidebar-canvas-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 .sidebar-attendance-btn {
   width: 100%;
   min-width: 0;
@@ -2796,14 +2611,6 @@ html[data-student-mode="light"] .theme-panel-menu .theme-special-swatches button
     min-height: 3rem;
     padding-inline: 0.25rem;
     font-size: 0.78rem;
-  }
-
-  html[data-sidebar="collapsed"] .sidebar-canvas-btn {
-    padding-inline: 0.2rem;
-  }
-
-  html[data-sidebar="collapsed"] .sidebar-canvas-icon {
-    display: inline-flex;
   }
 
   html[data-sidebar="collapsed"] .sidebar-theme .theme-panel-toggle {

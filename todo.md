@@ -110,8 +110,6 @@ These must be agreed on before either person starts their track. Commit the resu
 
 ### Student Dashboard
 - [x] Display current coin balance
-- [x] Display a Sunday-Saturday weekly assignment calendar with current-week due dates
-- [x] Load recurring classroom assignment templates from PostgreSQL
 - [x] Display attendance status
 - [x] Display avatar
 - [x] Show upcoming double days
@@ -145,7 +143,7 @@ These must be agreed on before either person starts their track. Commit the resu
 - [x] Add visual cosmetic overlays to avatar preview and saved avatar display
 - [x] Support avatar effect cosmetics
 
-### Student Navbar Integration
+### Student Navbar
 - [x] Display avatar
 - [x] Display username
 - [x] Display coin balance
