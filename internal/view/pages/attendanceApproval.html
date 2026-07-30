@@ -1,0 +1,110 @@
+{{define "content"}}
+
+<div class="admin-page-header">
+    <h1>Daily attendance</h1>
+    <p>Student check-ins are suggestions until the complete class is approved.</p>
+</div>
+
+{{if .Notice}}
+    <div class="admin-notice" role="status">{{.Notice}}</div>
+{{end}}
+{{if .Error}}
+    <div class="admin-notice admin-notice-error" role="alert">{{.Error}}</div>
+{{end}}
+
+<section class="attendance-toolbar" aria-label="Attendance selection">
+    <form method="GET" action="/attendance/approval">
+        <div class="form-group">
+            <label for="attendance-classroom">Class</label>
+            <select id="attendance-classroom" name="classroom" required>
+                {{range .Classes}}
+                    <option value="{{.ID}}" {{if eq $.SelectedClass .ID}}selected{{end}}>{{.Name}}</option>
+                {{end}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="attendance-date">School date</label>
+            <input id="attendance-date" type="date" name="date" value="{{.DateValue}}" required>
+        </div>
+        <button type="submit" class="admin-submit-btn">Load roster</button>
+    </form>
+
+    <div class="attendance-workflow-summary">
+        <span>Class state</span>
+        <strong class="attendance-state attendance-state-{{.StateClass}}">{{.StateLabel}}</strong>
+        {{if .Approval.Version}}<small>Snapshot version {{.Approval.Version}}</small>{{end}}
+    </div>
+</section>
+
+{{if not .Classes}}
+    <div class="shop-empty-state">
+        <h3>No assigned classes</h3>
+        <p>Teachers can review attendance after they are assigned to a classroom.</p>
+    </div>
+{{else if not .Approval.Students}}
+    <div class="shop-empty-state">
+        <h3>No students on this roster</h3>
+        <p>Add active students to the class before approving attendance.</p>
+    </div>
+{{else}}
+    <section class="attendance-review">
+        <div class="attendance-review-heading">
+            <div>
+                <h2>{{.Approval.ClassroomName}}</h2>
+                <p>{{len .Approval.Students}} students · {{.DateValue}}</p>
+            </div>
+            <p class="attendance-review-help">Checked-in students default to present. Everyone else defaults to absent.</p>
+        </div>
+
+        <form method="POST" action="/attendance/approval">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="classroom" value="{{.SelectedClass}}">
+            <input type="hidden" name="date" value="{{.DateValue}}">
+
+            <div class="attendance-table-wrap">
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Check-in indication</th>
+                            <th>Teacher decision</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Approval.Students}}
+                            <tr>
+                                <td>
+                                    <strong>{{.Name}}</strong>
+                                    <small>{{.UserID}}</small>
+                                </td>
+                                <td>
+                                    {{if .CheckedIn}}
+                                        <span class="attendance-checkin attendance-checkin-received">Checked in</span>
+                                    {{else}}
+                                        <span class="attendance-checkin">No check-in</span>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    <input type="hidden" name="student_id" value="{{.UserID}}">
+                                    <select name="status" aria-label="Attendance status for {{.Name}}" required>
+                                        <option value="present" {{if eq .Status "present"}}selected{{end}}>Present</option>
+                                        <option value="absent" {{if eq .Status "absent"}}selected{{end}}>Absent</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+
+            <footer class="attendance-approval-actions">
+                <p>Approval saves the entire roster as a permanent version. Rewards are not changed.</p>
+                <button type="submit" class="admin-submit-btn">
+                    {{if .Approval.Version}}Approve correction{{else}}Approve entire class{{end}}
+                </button>
+            </footer>
+        </form>
+    </section>
+{{end}}
+
+{{end}}

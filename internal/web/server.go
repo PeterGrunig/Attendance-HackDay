@@ -16,6 +16,9 @@ type AppStore interface {
 	AuthStore
 	StudentStore
 	TeacherStudentStore
+	CanvasIntegrationStore
+	AttendanceApprovalStore
+	AttendanceExportStore
 }
 
 func NewRouter(appStore AppStore) http.Handler {
@@ -26,6 +29,9 @@ func NewRouter(appStore AppStore) http.Handler {
 	authStore = appStore
 	studentStore = appStore
 	teacherStudentStore = appStore
+	canvasIntegrationStore = appStore
+	attendanceApprovalStore = appStore
+	attendanceExportStore = appStore
 	mux := http.NewServeMux()
 
 	staticFS, err := fs.Sub(view.FS, "static")
@@ -57,11 +63,14 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("POST /avatar/preview", RequireRole(http.HandlerFunc(avatarPreviewView), "student"))
 	mux.Handle("POST /avatar", RequireRole(http.HandlerFunc(avatarSaveView), "student"))
 	mux.Handle("POST /attendance", RequireRole(http.HandlerFunc(attendanceView), "student"))
+	mux.Handle("GET /student/integrations/canvas", RequireRole(http.HandlerFunc(studentCanvasView), "student"))
 
 	// teacher routes
 	mux.Handle("GET /teacherDashboard", RequireRole(http.HandlerFunc(teacherView), "teacher"))
 	mux.Handle("POST /teacherDashboard/edit", RequireRole(http.HandlerFunc(teacherEditView), "teacher"))
 	mux.Handle("GET /teacherDashboard/addStudent", RequireRole(http.HandlerFunc(teacherAddStudent), "teacher"))
+	mux.Handle("GET /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalView), "teacher", "admin"))
+	mux.Handle("POST /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalSubmit), "teacher", "admin"))
 
 	// admin routes
 	mux.Handle("GET /adminDashboard", RequireRole(http.HandlerFunc(adminView), "admin"))
@@ -76,6 +85,10 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("POST /addStudent", RequireRole(http.HandlerFunc(studentCreateSubmitView), "admin", "teacher"))
 	mux.Handle("GET /userSettings", RequireRole(http.HandlerFunc(userSettingsView), "admin"))
 	mux.Handle("POST /userSettings/role", RequireRole(http.HandlerFunc(updateUserRoleView), "admin"))
+	mux.Handle("GET /admin/integrations/canvas", RequireRole(http.HandlerFunc(canvasIntegrationView), "admin"))
+	mux.Handle("GET /admin/integrations/canvas/preview", RequireRole(http.HandlerFunc(canvasIntegrationView), "admin"))
+	mux.Handle("GET /admin/integrations/attendance", RequireRole(http.HandlerFunc(attendanceExportView), "admin"))
+	mux.Handle("GET /admin/integrations/attendance/mappings", RequireRole(http.HandlerFunc(attendanceDestinationMappingsView), "admin"))
 
 	return mux
 }

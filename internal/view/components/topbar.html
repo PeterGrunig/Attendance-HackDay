@@ -23,7 +23,7 @@
 {{end}}
 
 {{define "avatarStack"}}
-<div class="avatar-stack">
+<div class="avatar-stack avatar-base-{{.BaseID}}">
   <img class="avatar-base" src="{{.BaseImage}}" alt="Avatar">
   {{range .Layers}}
   <img class="avatar-layer avatar-layer-{{.Slot}}" src="{{.Image}}" alt="{{.Label}}">

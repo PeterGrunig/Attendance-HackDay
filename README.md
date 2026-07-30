@@ -2,22 +2,31 @@
 
 Attendance Quest is a Go server-rendered attendance rewards app for students,
 teachers, and admins. Students can log in, mark attendance, earn coins, buy shop
-items, and customize an avatar with unlocked cosmetics.
+items, unlock base avatars, and customize a character with owned cosmetics.
 
 ## Current Capabilities
 
 - SQL-backed login with in-memory session tokens and role-aware routing.
-- SQL-backed student dashboard with attendance status, coin balance, the current avatar, and a Sunday-through-Saturday assignment calendar.
-- Classroom assignment templates in `WeeklyAssignmentTemplates` recur by weekday; the dashboard derives their due dates for the current server-local week on each request. This is proof-of-concept mock data, not an assignment editing or completion workflow.
+- SQL-backed student dashboard focused on attendance status, rewards, the current avatar, and upcoming double-reward days.
 - Student shop with SQL-backed catalog, ownership, coin validation, and atomic purchases.
-- Avatar customization with free base avatars, owned cosmetic unlocks, layered visual preview, and SQL-backed saves.
-- Student pages include persistent light/dark controls, free background colors, and unlocked special background themes.
+- Avatar customization with Gerald as the free base, purchased character and cosmetic unlocks, layered visual preview, and SQL-backed saves.
+- Student pages include persistent light/dark controls, free background colors, unlocked special background themes, and a coin shop where every base avatar except Gerald costs 10 coins.
+- Gerald is the free default avatar. Locked characters remain visible on the avatar page but cannot be equipped until purchased; hats, clothing, accessories, and effects use slot- and character-aware placement.
 - Manual coin adjustments are stored in `ManualCoinAdjustments` without creating transaction records.
-- The admin dashboard, User Settings, Add Student, Add Teacher, and classroom create/edit flows use PostgreSQL; dashboard and edit classroom pages load rosters from `ClassroomStudents`.
+- The admin dashboard, User Settings, Add Student, Add Teacher, and classroom create/edit flows use PostgreSQL. `ClassroomMemberships` is the normalized roster source after `Seed_DataBase3.sql`; compatibility writes continue maintaining the legacy classroom columns and tables.
 - Teacher and admin dashboard scaffolding plus classroom management routes.
+- Teacher attendance approval for assigned classes, with admin access to every class. Student check-ins default the daily roster to present, missing check-ins default to absent, and each whole-class approval is stored as an immutable version. A later approval creates a correction-pending version without changing check-in rewards.
+- Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
+- Provider-specific Canvas, Ed-Fi, encrypted connection, mapping, and export code remains available as dormant architecture. The admin **Roster Connection** and **Official Records** screens are presentation placeholders and their mutation routes are not registered.
+- The student navigation includes a static **School Portal** placeholder showing where a future Canvas or provider-neutral school connection could appear. It performs no OAuth, iframe loading, credential lookup, or database migration check.
+- Admin pages support persistent light and dark display modes while the functional Attendance review remains available.
 
 Some teacher/admin reporting and schedule-management flows are still in progress;
 see `todo.md` for the remaining project checklist.
+
+See [Integration Architecture and Operations](docs/integrations.md) for provider
+design, Canvas and Ed-Fi setup, encryption, approval, retry, logging, and adapter
+extension guidance.
 
 ## Codebase Map
 
@@ -25,6 +34,10 @@ see `todo.md` for the remaining project checklist.
 - `internal/web` contains routes, handlers, in-memory session helpers, and server-rendered student/admin flows.
 - `internal/store` contains all PostgreSQL data access, including atomic attendance rewards and shop purchases.
 - `internal/domain` contains persisted application models.
+- `internal/integrations` contains provider-neutral contracts, capability metadata, provider registration, and AES-GCM credential encryption.
+- `internal/integrations/canvas` contains the Canvas OAuth client, roster-only adapter, and dormant owner-scoped connection support.
+- `internal/integrations/edfi` contains the official daily-attendance destination adapter.
+- `internal/attendanceexport` orchestrates destination validation, durable outbox delivery, bounded retries, and provider-neutral response handling.
 - `internal/view` contains embedded templates, static CSS, and images.
 
 PostgreSQL is the application's only runtime data store. The browser cookie contains an opaque token; its short-lived session record remains in application memory and references the SQL `Users.UserID`.
@@ -57,9 +70,6 @@ To manually add or subtract coins, insert or update the student's amount in
 `ManualCoinAdjustments`. That amount is added to the starting balance and
 the sum of `Transactions`.
 
-Added CodeQL
-
-
 ## Database setup
 
 1. Start the PostgreSQL container. The Compose environment creates the
@@ -84,8 +94,14 @@ precedence over `.env`; do not deploy the local `.env` file. If the application
 is added to this Compose network later, use `db:5432` as its database host and
 port instead of `localhost:5433`.
 
-So basically, we will set up the database with supabase. They will give the database URL to us, which we will store in a secrate manager. Then when we host it, we will configure the environement variables to point to our secrate.
+For hosted deployments, store `DATABASE_URL` and integration secrets in the
+hosting platform's secret manager.
 
+`INTEGRATION_CREDENTIAL_KEY` enables encrypted provider credentials. Dormant
+Canvas adapter code can also use `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and
+`CANVAS_REDIRECT_URL` when its routes are deliberately re-enabled. The current
+student and admin connection placeholders require none of these values. See the
+[integration runbook](docs/integrations.md) before connecting Canvas or Ed-Fi.
 
 ## Check Database in DBeaver
 
@@ -123,7 +139,9 @@ So basically, we will set up the database with supabase. They will give the data
     docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase.sql
     ```
 
-3. Apply the idempotent delta seed for the latest student records, image path metadata, and recurring weekly assignment templates. This includes the final records migrated from the retired JSON store.
+3. Apply the idempotent delta seed for the latest student, shop, avatar, and
+   image-path records. This includes the final records migrated from the
+   retired JSON store.
 
     ```powershell
     Get-Content -Raw .\Seed_DataBase2.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
@@ -134,3 +152,43 @@ So basically, we will set up the database with supabase. They will give the data
     ```bash
     docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase2.sql
     ```
+
+4. Apply the additive integration foundation migration before deploying code
+   that reads `ClassroomMemberships`. It backfills existing classroom and
+   attendance data while retaining `Users.ClassroomID`, `Classrooms.TeacherID`,
+   `ClassroomStudents`, and `AttendanceRecords` for compatibility.
+
+    ```powershell
+    Get-Content -Raw .\Seed_DataBase3.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
+    ```
+
+    Bash / WSL:
+
+    ```bash
+    docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase3.sql
+    ```
+
+5. Optionally apply the additive owner-scoping migration before re-enabling the
+   dormant student provider-account linking code:
+
+    ```powershell
+    Get-Content -Raw .\Seed_DataBase4.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
+    ```
+
+    Bash / WSL:
+
+    ```bash
+    docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase4.sql
+    ```
+
+The application does not apply `Seed_DataBase3.sql` automatically. It must be
+applied before deploying the updated membership, teacher approval, or dormant
+provider store code. Approval and provider scaffolding use these integration
+tables and require no later migration.
+The application also does not apply `Seed_DataBase4.sql`. The current static
+student School Portal does not need it; apply it before re-enabling persisted
+student provider connections.
+
+The demo seeds use a provider-neutral `Demo Elementary School`. Every seeded
+classroom membership references a seeded user with the matching role, and no
+Canvas, Ed-Fi, or other external connection is inserted automatically.

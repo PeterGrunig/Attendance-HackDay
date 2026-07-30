@@ -47,6 +47,12 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			},
 		},
 		{
+			name: "teacher attendance approval",
+			load: func() (*template.Template, error) {
+				return loadTeacherTemplates("attendanceApproval.html")
+			},
+		},
+		{
 			name: "admin dashboard",
 			load: func() (*template.Template, error) {
 				return loadAdminTemplates("adminDash.html")
@@ -80,6 +86,30 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			name: "user settings",
 			load: func() (*template.Template, error) {
 				return loadAdminTemplates("userSettings.html")
+			},
+		},
+		{
+			name: "Canvas integration",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("canvasIntegration.html")
+			},
+		},
+		{
+			name: "attendance exports",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("attendanceExports.html")
+			},
+		},
+		{
+			name: "attendance destination mappings",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("attendanceMappings.html")
+			},
+		},
+		{
+			name: "Canvas import preview",
+			load: func() (*template.Template, error) {
+				return loadAdminTemplates("canvasPreview.html")
 			},
 		},
 	}

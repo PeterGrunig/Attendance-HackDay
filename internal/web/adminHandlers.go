@@ -44,10 +44,11 @@ type AdminDashboardSummary struct {
 }
 
 type AdminClassroomView struct {
-	Name     string
-	ID       string
-	Teacher  AdminClassroomPerson
-	Students []AdminClassroomPerson
+	Name      string
+	ID        string
+	ManagedBy string
+	Teacher   AdminClassroomPerson
+	Students  []AdminClassroomPerson
 }
 
 type AdminClassroomPerson struct {
@@ -144,7 +145,7 @@ func adminView(w http.ResponseWriter, r *http.Request) {
 		Title:               "Admin Dashboard",
 		Username:            user.Name,
 		HeaderTitle:         "Admin Dashboard",
-		HeaderSubtitle:      "Review classroom assignments and roster details.",
+		HeaderSubtitle:      "Review classroom staffing and roster details.",
 		HeaderBadge:         "Admin View",
 		Summary:             buildAdminDashboardSummary(classrooms, classroomUsers),
 		NeedsAttention:      needsAttention,
@@ -170,10 +171,11 @@ func buildAdminClassroomViews(classrooms []Classroom, users map[string]User) []A
 		}
 
 		views = append(views, AdminClassroomView{
-			Name:     classroom.Name,
-			ID:       classroom.ID,
-			Teacher:  adminClassroomPerson(classroom.TeacherID, users),
-			Students: students,
+			Name:      classroom.Name,
+			ID:        classroom.ID,
+			ManagedBy: classroom.ManagedBy,
+			Teacher:   adminClassroomPerson(classroom.TeacherID, users),
+			Students:  students,
 		})
 	}
 
@@ -665,13 +667,13 @@ func teacherCreateSubmitView(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/adminDashboard", http.StatusSeeOther)
 }
 
-//This creates a student form the teacher dash
+// This creates a student form the teacher dash
 func teacherAddStudent(w http.ResponseWriter, r *http.Request) {
 	if teacherStudentStore == nil {
 		http.Error(w, "teacher student store is not configured", http.StatusInternalServerError)
 		return
 	}
-	
+
 	user, ok := authenticatedUser(r)
 	if !ok {
 		http.Error(w, "user not authenticated", http.StatusUnauthorized)
@@ -696,9 +698,7 @@ func teacherAddStudent(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
-
-//This creates a student accoutn from the admin dash
+// This creates a student accoutn from the admin dash
 func createStudent(w http.ResponseWriter, r *http.Request) {
 	if adminStudentStore == nil {
 		http.Error(w, "student store is not configured", http.StatusInternalServerError)

@@ -48,7 +48,7 @@
             <section class="dashboard-classroom-card {{if not .Students}}needs-attention{{end}}">
                 <div class="dashboard-classroom-main">
                     <div>
-                        <h2>{{.Name}}</h2>
+                        <h2>{{.Name}}{{if .ManagedBy}} <small>{{.ManagedBy}}-managed</small>{{end}}</h2>
                         <p>{{.ID}}</p>
                     </div>
 

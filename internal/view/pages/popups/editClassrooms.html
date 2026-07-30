@@ -20,6 +20,7 @@
     <div class="classroom-row">
 
         <div class="classroom-info">
+            {{if .ManagedBy}}<span class="integration-status integration-status-active">{{.ManagedBy}}-managed</span>{{end}}
 
             <div class="form-group">
                 <label>Classroom Name</label>

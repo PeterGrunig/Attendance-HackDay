@@ -38,16 +38,28 @@
         <div class="avatar-section">
             <div class="section-header">
                 <h2>Base Avatar</h2>
-                <p>Base avatars are available to every student.</p>
+                <p>Gerald is free. Unlock every other character in the shop for 10 coins.</p>
             </div>
 
             <div class="avatar-grid">
                 {{range .AvatarBaseOptions}}
-                <label class="avatar-option">
+                {{if .Owned}}
+                <label class="avatar-option {{if .Selected}}selected{{end}}">
                     <input type="radio" name="base" value="{{.ID}}" {{if .Selected}}checked{{end}}>
                     <img src="{{.Image}}" alt="{{.Label}}">
                     <span>{{.Label}}</span>
+                    <small>{{if .Selected}}Equipped{{else if eq .ID "gerald"}}Free{{else}}Owned{{end}}</small>
                 </label>
+                {{else}}
+                <div class="avatar-option locked" aria-label="{{.Label}}, locked">
+                    <div class="avatar-option-image">
+                        <img src="{{.Image}}" alt="{{.Label}}">
+                        <span class="avatar-option-lock" aria-hidden="true">🔒</span>
+                    </div>
+                    <span>{{.Label}}</span>
+                    <small>{{.Price}} coins in the shop</small>
+                </div>
+                {{end}}
                 {{end}}
             </div>
         </div>

@@ -1,0 +1,62 @@
+{{define "content"}}
+<div class="admin-page-header">
+    <h1>Official identifier mappings</h1>
+    <p>{{.ConnectionName}} · {{.ProviderKind}}</p>
+</div>
+
+{{if .Message}}<div class="admin-notice" role="status">{{.Message}}</div>{{end}}
+{{if .Error}}<div class="admin-notice admin-notice-error" role="alert">{{.Error}}</div>{{end}}
+
+<section class="mapping-summary">
+    <div>
+        <span>Mapping status</span>
+        <strong>{{if .MissingCount}}{{.MissingCount}} identifiers missing{{else}}Complete{{end}}</strong>
+    </div>
+    <p>SIS IDs are reused automatically when available. Enter only identifiers that could not be joined safely.</p>
+</section>
+
+<section class="admin-form-card">
+    {{if .Mappings}}
+    <form method="POST" action="/admin/integrations/attendance/mappings">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="connection_id" value="{{.ConnectionID}}">
+        <div class="attendance-table-wrap">
+            <table class="mapping-table">
+                <thead>
+                    <tr><th>Type</th><th>Attendance Quest record</th><th>SIS suggestion</th><th>Official identifier</th></tr>
+                </thead>
+                <tbody>
+                {{range .Mappings}}
+                    <tr class="{{if not .ExternalID}}mapping-row-missing{{end}}">
+                        <td>
+                            {{if eq .EntityKind "school"}}School{{else if eq .EntityKind "classroom"}}Class / section{{else}}Student{{end}}
+                            <input type="hidden" name="entity_kind" value="{{.EntityKind}}">
+                        </td>
+                        <td>
+                            <strong>{{.LocalName}}</strong>
+                            <small>{{.LocalID}}</small>
+                            <input type="hidden" name="local_id" value="{{.LocalID}}">
+                            <input type="hidden" name="local_name" value="{{.LocalName}}">
+                        </td>
+                        <td>
+                            {{if .SISID}}{{.SISID}}{{else}}—{{end}}
+                            <input type="hidden" name="sis_id" value="{{.SISID}}">
+                        </td>
+                        <td>
+                            <input name="external_id" value="{{.ExternalID}}" aria-label="Official identifier for {{.LocalName}}" placeholder="{{if eq .EntityKind "school"}}Numeric Ed-Fi schoolId{{else if eq .EntityKind "user"}}Ed-Fi studentUniqueId{{else}}Official section identifier{{end}}">
+                        </td>
+                    </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+        <footer class="mapping-actions">
+            <p>The destination is enabled only after every active school, class, and student has an official identifier.</p>
+            <button class="admin-submit-btn" type="submit">Save mappings</button>
+        </footer>
+    </form>
+    {{else}}
+    <p>No active schools, classrooms, or students need mappings.</p>
+    {{end}}
+</section>
+{{end}}

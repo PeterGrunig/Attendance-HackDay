@@ -19,8 +19,26 @@
 
     <div class="shop-section">
         <div class="section-header">
-            <h2>Avatar Items</h2>
-            <p>Cosmetics that can be equipped on the avatar page.</p>
+            <h2>Unlock a Character</h2>
+            <p>Each locked avatar costs 10 coins. Purchase one here, then equip it on the avatar page.</p>
+        </div>
+
+        <div class="shop-grid">
+            {{range .LockedAvatarShopItems}}
+            {{template "shopItemCard" .}}
+            {{else}}
+            <div class="shop-empty-state">
+                <h3>Every character is unlocked!</h3>
+                <p>Your purchased avatars are listed under Owned Items.</p>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="shop-section">
+        <div class="section-header">
+            <h2>Cosmetics</h2>
+            <p>Hats, clothing, accessories, and effects for your character.</p>
         </div>
 
         <div class="shop-grid">
@@ -28,8 +46,8 @@
             {{template "shopItemCard" .}}
             {{else}}
             <div class="shop-empty-state">
-                <h3>No avatar items yet</h3>
-                <p>Add avatar cosmetics here when you are ready.</p>
+                <h3>No cosmetics yet</h3>
+                <p>New avatar items will appear here.</p>
             </div>
             {{end}}
         </div>

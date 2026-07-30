@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -14,6 +15,11 @@ import (
 const (
 	defaultAvatarBaseID = "gerald"
 	defaultAvatarImage  = "/static/images/avatars/gerald.png"
+	avatarBasePrice     = 10
+
+	// avatarCosmeticAssetVersion changes when cosmetic files are replaced in
+	// place so browsers fetch the new shop and avatar artwork immediately.
+	avatarCosmeticAssetVersion = "2"
 
 	avatarSlotHairStyle = "hair_style"
 	avatarSlotClothing  = "clothing"
@@ -52,18 +58,22 @@ var avatarBaseCatalog = []avatarBaseOption{
 }
 
 var avatarCosmeticCatalog = []avatarCosmeticOption{
-	{ID: "hat_star", Label: "Star Hat", Slot: avatarSlotHairStyle, Image: "/static/images/cosmetics/hat_star.png"},
-	{ID: "hat_wizard", Label: "Wizard Hat", Slot: avatarSlotHairStyle, Image: "/static/images/cosmetics/hat_wizard.png"},
-	{ID: "crown_flower", Label: "Flower Crown", Slot: avatarSlotHairStyle, Image: "/static/images/cosmetics/crown_flower.png"},
-	{ID: "cape_gold", Label: "Golden Cape", Slot: avatarSlotClothing, Image: "/static/images/cosmetics/cape_gold.png"},
-	{ID: "hoodie_blue", Label: "Blue Hoodie", Slot: avatarSlotClothing, Image: "/static/images/cosmetics/hoodie_blue.png"},
-	{ID: "scarf_red", Label: "Red Scarf", Slot: avatarSlotClothing, Image: "/static/images/cosmetics/scarf_red.png"},
-	{ID: "glasses_rocket", Label: "Rocket Glasses", Slot: avatarSlotAccessory, Image: "/static/images/cosmetics/glasses_rocket.png"},
-	{ID: "shades_pixel", Label: "Pixel Shades", Slot: avatarSlotAccessory, Image: "/static/images/cosmetics/shades_pixel.png"},
-	{ID: "headphones_gem", Label: "Gem Headphones", Slot: avatarSlotAccessory, Image: "/static/images/cosmetics/headphones_gem.png"},
-	{ID: "trail_rainbow", Label: "Rainbow Trail", Slot: avatarSlotEffect, Image: "/static/images/cosmetics/trail_rainbow.png"},
-	{ID: "aura_sparkle", Label: "Sparkle Aura", Slot: avatarSlotEffect, Image: "/static/images/cosmetics/aura_sparkle.png"},
-	{ID: "trail_comet", Label: "Comet Trail", Slot: avatarSlotEffect, Image: "/static/images/cosmetics/trail_comet.png"},
+	{ID: "hat_star", Label: "Star Hat", Slot: avatarSlotHairStyle, Image: avatarCosmeticImage("/static/images/cosmetics/hat_star.png")},
+	{ID: "hat_wizard", Label: "Wizard Hat", Slot: avatarSlotHairStyle, Image: avatarCosmeticImage("/static/images/cosmetics/hat_wizard.png")},
+	{ID: "crown_flower", Label: "Flower Crown", Slot: avatarSlotHairStyle, Image: avatarCosmeticImage("/static/images/cosmetics/crown_flower.png")},
+	{ID: "cape_gold", Label: "Golden Cape", Slot: avatarSlotClothing, Image: avatarCosmeticImage("/static/images/cosmetics/cape_gold.png")},
+	{ID: "hoodie_blue", Label: "Blue Hoodie", Slot: avatarSlotClothing, Image: avatarCosmeticImage("/static/images/cosmetics/hoodie_blue.png")},
+	{ID: "scarf_red", Label: "Red Scarf", Slot: avatarSlotClothing, Image: avatarCosmeticImage("/static/images/cosmetics/scarf_red.png")},
+	{ID: "glasses_rocket", Label: "Rocket Glasses", Slot: avatarSlotAccessory, Image: avatarCosmeticImage("/static/images/cosmetics/glasses_rocket.png")},
+	{ID: "shades_pixel", Label: "Pixel Shades", Slot: avatarSlotAccessory, Image: avatarCosmeticImage("/static/images/cosmetics/shades_pixel.png")},
+	{ID: "headphones_gem", Label: "Gem Headphones", Slot: avatarSlotAccessory, Image: avatarCosmeticImage("/static/images/cosmetics/headphones_gem.png")},
+	{ID: "trail_rainbow", Label: "Rainbow Trail", Slot: avatarSlotEffect, Image: avatarCosmeticImage("/static/images/cosmetics/trail_rainbow.png")},
+	{ID: "aura_sparkle", Label: "Sparkle Aura", Slot: avatarSlotEffect, Image: avatarCosmeticImage("/static/images/cosmetics/aura_sparkle.png")},
+	{ID: "trail_comet", Label: "Comet Trail", Slot: avatarSlotEffect, Image: avatarCosmeticImage("/static/images/cosmetics/trail_comet.png")},
+}
+
+func avatarCosmeticImage(path string) string {
+	return path + "?v=" + avatarCosmeticAssetVersion
 }
 
 // avatarView renders the saved avatar config, while preview and save POSTs reuse
@@ -90,6 +100,7 @@ func avatarPreviewView(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := avatarConfigFromRequest(r, state.OwnedShopItemIDs)
 	if err != nil {
+		log.Printf("avatar preview rejected user_id=%q error=%v", state.User.UserID, err)
 		data := buildAvatarPageData(state, savedAvatarConfig(state.AvatarConfig, state.OwnedShopItemIDs), "", avatarValidationMessage(err))
 		renderStudent(w, "avatarView.html", data)
 		return
@@ -113,6 +124,7 @@ func avatarSaveView(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := avatarConfigFromRequest(r, state.OwnedShopItemIDs)
 	if err != nil {
+		log.Printf("avatar save rejected user_id=%q error=%v", state.User.UserID, err)
 		data := buildAvatarPageData(state, savedAvatarConfig(state.AvatarConfig, state.OwnedShopItemIDs), "", avatarValidationMessage(err))
 		renderStudent(w, "avatarView.html", data)
 		return
@@ -127,7 +139,7 @@ func avatarSaveView(w http.ResponseWriter, r *http.Request) {
 }
 
 func savedAvatarConfig(config *AvatarConfig, ownedIDs []string) *AvatarConfig {
-	return stripUnownedAvatarCosmetics(ownedIDs, normalizeAvatarConfig(config))
+	return stripUnownedAvatarItems(ownedIDs, normalizeAvatarConfig(config))
 }
 
 func avatarConfigFromRequest(r *http.Request, ownedIDs []string) (*AvatarConfig, error) {
@@ -157,6 +169,9 @@ func validateAvatarConfig(ownedIDs []string, cfg *AvatarConfig) (*AvatarConfig, 
 	}
 	if !avatarBaseExists(base) {
 		return nil, errInvalidAvatarSelection
+	}
+	if !ownsAvatarBase(ownedIDs, base) {
+		return nil, errLockedAvatarSelection
 	}
 
 	hairStyle := strings.TrimSpace(cfg.HairStyle)
@@ -230,12 +245,17 @@ func normalizeAvatarConfig(cfg *AvatarConfig) *AvatarConfig {
 	return normalized
 }
 
-func stripUnownedAvatarCosmetics(ownedIDs []string, cfg *AvatarConfig) *AvatarConfig {
+// stripUnownedAvatarItems keeps old or tampered saved selections from bypassing
+// the same ownership boundary used by the avatar form.
+func stripUnownedAvatarItems(ownedIDs []string, cfg *AvatarConfig) *AvatarConfig {
 	if cfg == nil {
 		return normalizeAvatarConfig(nil)
 	}
 
 	cleaned := *cfg
+	if !ownsAvatarBase(ownedIDs, cleaned.Base) {
+		cleaned.Base = defaultAvatarBaseID
+	}
 	if !ownsShopItem(ownedIDs, cleaned.HairStyle) {
 		cleaned.HairStyle = ""
 	}
@@ -278,7 +298,7 @@ func buildAvatarPageData(state domain.StudentState, cfg *AvatarConfig, message, 
 		ActiveNav:              "avatar",
 		UseStudentCSS:          true,
 		ThemeBackgroundOptions: ownedThemeBackgroundOptionViews(state.OwnedShopItemIDs),
-		AvatarBaseOptions:      avatarBaseOptionViews(normalized.Base),
+		AvatarBaseOptions:      avatarBaseOptionViews(state.OwnedShopItemIDs, normalized.Base),
 		AvatarHairOptions:      avatarCosmeticOptionViews(state.OwnedShopItemIDs, avatarSlotHairStyle, normalized.HairStyle),
 		AvatarClothOptions:     avatarCosmeticOptionViews(state.OwnedShopItemIDs, avatarSlotClothing, normalized.Clothing),
 		AvatarAccessOptions:    avatarCosmeticOptionViews(state.OwnedShopItemIDs, avatarSlotAccessory, normalized.Accessory),
@@ -297,6 +317,7 @@ func buildAvatarPreview(cfg *AvatarConfig) AvatarPreviewView {
 	}
 
 	preview := AvatarPreviewView{
+		BaseID:         base.ID,
 		BaseLabel:      base.Label,
 		BaseImage:      base.Image,
 		HairStyleLabel: cosmeticLabel(normalized.HairStyle),
@@ -318,17 +339,23 @@ func buildAvatarPreview(cfg *AvatarConfig) AvatarPreviewView {
 	return preview
 }
 
-func avatarBaseOptionViews(selectedID string) []AvatarBaseOptionView {
+func avatarBaseOptionViews(ownedIDs []string, selectedID string) []AvatarBaseOptionView {
 	views := make([]AvatarBaseOptionView, 0, len(avatarBaseCatalog))
 	for _, option := range avatarBaseCatalog {
 		views = append(views, AvatarBaseOptionView{
 			ID:       option.ID,
 			Label:    option.Label,
 			Image:    option.Image,
+			Price:    avatarBasePrice,
+			Owned:    ownsAvatarBase(ownedIDs, option.ID),
 			Selected: option.ID == selectedID,
 		})
 	}
 	return views
+}
+
+func ownsAvatarBase(ownedIDs []string, baseID string) bool {
+	return baseID == defaultAvatarBaseID || ownsShopItem(ownedIDs, baseID)
 }
 
 func avatarCosmeticOptionViews(ownedIDs []string, slot, selectedID string) []AvatarCosmeticOptionView {
@@ -438,7 +465,7 @@ func avatarLayerViews(ids []string) []AvatarLayerView {
 func avatarValidationMessage(err error) string {
 	switch {
 	case errors.Is(err, errLockedAvatarSelection):
-		return "You can only equip cosmetics you own."
+		return "You can only equip avatars and cosmetics you own."
 	case errors.Is(err, errInvalidAvatarSelection):
 		return "Choose a valid avatar option."
 	default:

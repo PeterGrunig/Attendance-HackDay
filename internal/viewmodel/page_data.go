@@ -10,20 +10,6 @@ type TemplateData struct {
 	Schedules      map[string]*domain.Schedule
 }
 
-type WeeklyAssignmentView struct {
-	Subject string
-	Title   string
-	DueTime string
-}
-
-type WeeklyScheduleDayView struct {
-	DayName     string
-	DateLabel   string
-	DateISO     string
-	IsToday     bool
-	Assignments []WeeklyAssignmentView
-}
-
 type DoubleDayView struct {
 	DayOfWeek string
 	StartTime string
@@ -50,6 +36,8 @@ type AvatarBaseOptionView struct {
 	ID       string
 	Label    string
 	Image    string
+	Price    int
+	Owned    bool
 	Selected bool
 }
 
@@ -70,6 +58,7 @@ type AvatarLayerView struct {
 }
 
 type AvatarPreviewView struct {
+	BaseID         string
 	BaseLabel      string
 	BaseImage      string
 	HairStyleLabel string
@@ -93,13 +82,10 @@ type PageData struct {
 	AttendanceStatus       string
 	AttendanceMessage      string
 	CanMarkAttendance      bool
-	CurrentWeekLabel       string
-	WeeklyAssignmentDays   []WeeklyScheduleDayView
-	PreviousWeekURL        string
-	NextWeekURL            string
 	UpcomingDoubleDays     []DoubleDayView
 	ActiveNav              string
 	UseStudentCSS          bool
+	LockedAvatarShopItems  []ShopItemView
 	AvatarShopItems        []ShopItemView
 	BackgroundShopItems    []ShopItemView
 	OwnedShopItems         []ShopItemView
@@ -114,4 +100,11 @@ type PageData struct {
 	AvatarMessage          string
 	AvatarError            string
 	ShowAvatarPreview      bool
+	CanvasConfigured       bool
+	CanvasConnected        bool
+	CanvasAccountName      string
+	CanvasBaseURL          string
+	CanvasMessage          string
+	CanvasError            string
+	CanvasCSRFToken        string
 }

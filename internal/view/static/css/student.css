@@ -427,11 +427,89 @@ html[data-student-bg="sunset"] body::before {
 
 .avatar-base {
   object-fit: cover;
+  z-index: 1;
 }
 
 .avatar-layer {
   object-fit: contain;
   pointer-events: none;
+}
+
+/* Cosmetics share one canvas, so each slot gets a consistent anchor and each
+   unusually framed base avatar can fine-tune that anchor without new artwork. */
+.avatar-layer-effect {
+  z-index: 2;
+  transform: translate(var(--effect-x, 0), var(--effect-y, 0)) scale(var(--effect-scale, 1));
+}
+
+.avatar-layer-clothing {
+  z-index: 3;
+  transform: translate(var(--clothing-x, 0), var(--clothing-y, 8%)) scale(var(--clothing-scale, 0.88));
+}
+
+.avatar-layer-hair_style {
+  z-index: 4;
+  transform: translate(var(--hair-x, 0), var(--hair-y, -10%)) scale(var(--hair-scale, 0.78));
+}
+
+.avatar-layer-accessory {
+  z-index: 5;
+  transform: translate(var(--accessory-x, 0), var(--accessory-y, -9%)) scale(var(--accessory-scale, 0.78));
+}
+
+.avatar-base-brainrot {
+  --hair-y: -13%;
+  --accessory-y: -10%;
+  --clothing-y: 5%;
+}
+
+.avatar-base-d_money {
+  --hair-y: -13%;
+  --accessory-y: -7%;
+  --clothing-scale: 0.92;
+}
+
+.avatar-base-funk_rapper {
+  --hair-y: -13%;
+  --accessory-y: -8%;
+  --clothing-y: 7%;
+}
+
+.avatar-base-gopher {
+  --hair-y: -15%;
+  --accessory-y: -14%;
+  --clothing-y: 4%;
+  --clothing-scale: 0.84;
+}
+
+.avatar-base-mike {
+  --hair-y: -14%;
+  --accessory-y: -13%;
+  --clothing-y: 4%;
+  --clothing-scale: 0.86;
+}
+
+.avatar-base-milkman {
+  --hair-y: -15%;
+  --hair-scale: 0.88;
+  --accessory-y: -4%;
+  --accessory-scale: 0.9;
+  --clothing-y: 11%;
+  --clothing-scale: 0.94;
+}
+
+.avatar-base-peter {
+  --hair-y: -12%;
+  --accessory-y: -11%;
+  --clothing-y: 9%;
+  --clothing-scale: 0.9;
+}
+
+.avatar-base-salaryman {
+  --hair-y: -14%;
+  --accessory-y: -8%;
+  --clothing-y: 9%;
+  --clothing-scale: 0.86;
 }
 
 .brand-title {
@@ -1620,163 +1698,6 @@ html[data-student-mode="light"] .bottombar {
   font-weight: 400;
 }
 
-.weekly-schedule-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.weekly-schedule-header h3,
-.weekly-schedule-header p {
-  margin: 0;
-}
-
-.weekly-schedule-header p {
-  color: var(--student-muted);
-  font-weight: 800;
-}
-
-.weekly-schedule-nav {
-  display: flex;
-  gap: .45rem;
-  margin-left: auto;
-}
-
-.weekly-schedule-nav a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  background: var(--student-surface-strong);
-  color: var(--student-ink);
-  font-size: 1.25rem;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.weekly-schedule-nav a:hover,
-.weekly-schedule-nav a:focus-visible {
-  border-color: var(--student-cyan);
-  color: var(--student-cyan);
-}
-
-.weekly-schedule-scroll {
-  overflow-x: visible;
-  padding-bottom: .35rem;
-}
-
-.weekly-schedule-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  background: var(--student-surface-strong);
-}
-
-.weekly-day {
-  min-width: 0;
-  min-height: 220px;
-  padding: .75rem;
-  border-right: 1px solid var(--student-line);
-}
-
-.weekly-day:last-child {
-  border-right: 0;
-}
-
-.weekly-day.is-today {
-  background: color-mix(in srgb, var(--student-bg-low) 42%, transparent);
-  box-shadow: inset 0 4px 0 var(--student-green);
-}
-
-.weekly-day > header {
-  display: grid;
-  gap: .2rem;
-  padding-bottom: .65rem;
-  border-bottom: 1px solid var(--student-line);
-}
-
-.weekly-day > header strong {
-  color: var(--student-cyan);
-  font-family: var(--student-font-display);
-  font-weight: 400;
-}
-
-.weekly-day > header time,
-.weekly-day-empty,
-.weekly-assignment small {
-  color: var(--student-muted);
-}
-
-.weekly-assignment-list {
-  display: grid;
-  gap: .6rem;
-  margin-top: .75rem;
-}
-
-.weekly-assignment {
-  display: grid;
-  min-width: 0;
-  gap: .25rem;
-  padding: .6rem;
-  border-left: 3px solid var(--student-purple);
-  border-radius: 0 6px 6px 0;
-  background: var(--student-surface-soft);
-}
-
-.weekly-assignment span {
-  color: var(--student-purple);
-  font-size: .68rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.weekly-assignment strong {
-  color: var(--student-ink);
-  font-size: .82rem;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.weekly-assignment small {
-  font-size: .72rem;
-  font-weight: 700;
-}
-
-.weekly-day-empty {
-  margin: .75rem 0 0;
-  font-size: .78rem;
-}
-
-@media (max-width: 900px) {
-  .weekly-schedule-scroll {
-    overflow-x: auto;
-  }
-
-  .weekly-schedule-grid {
-    min-width: 840px;
-  }
-}
-
-@media (max-width: 720px) {
-  .weekly-schedule-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .weekly-schedule-nav {
-    align-self: flex-end;
-  }
-}
-
 .double-day-badge,
 .shop-owned-item,
 .avatar-lock {
@@ -1986,6 +1907,45 @@ html[data-student-mode="light"] .bottombar {
   border-radius: 8px;
 }
 
+.avatar-option small {
+  display: block;
+  min-height: 1.1rem;
+  margin-top: 0.35rem;
+  color: var(--student-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.avatar-option.locked {
+  position: relative;
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.avatar-option.locked img {
+  filter: saturate(0.55) brightness(0.82);
+}
+
+.avatar-option-image {
+  position: relative;
+}
+
+.avatar-option-lock {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--student-line);
+  border-radius: 999px;
+  display: grid !important;
+  place-items: center;
+  background: var(--student-surface-strong);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--student-line) 80%, transparent);
+  font-size: 0.9rem;
+}
+
 .avatar-cosmetic-group {
   padding: 1rem;
 }
@@ -2076,9 +2036,6 @@ html[data-student-mode="light"] .avatar-cosmetic-image {
     grid-column: 1 / -1;
   }
 
-  .dashboard-container .weekly-assignment-schedule {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 720px) {
@@ -2550,31 +2507,6 @@ html[data-student-mode="light"] .theme-panel-menu .theme-special-swatches button
   margin: 0;
 }
 
-.sidebar-canvas-btn {
-  width: 100%;
-  min-width: 0;
-  min-height: 3rem;
-  padding: 0.65rem;
-  border: 2px solid var(--student-line);
-  border-radius: 8px;
-  color: var(--student-ink);
-  background: var(--student-surface-strong);
-  font-size: 0.85rem;
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-.sidebar-canvas-icon {
-  width: 1.4rem;
-  height: 1.4rem;
-}
-
-.sidebar-canvas-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 .sidebar-attendance-btn {
   width: 100%;
   min-width: 0;
@@ -2681,14 +2613,6 @@ html[data-student-mode="light"] .theme-panel-menu .theme-special-swatches button
     font-size: 0.78rem;
   }
 
-  html[data-sidebar="collapsed"] .sidebar-canvas-btn {
-    padding-inline: 0.2rem;
-  }
-
-  html[data-sidebar="collapsed"] .sidebar-canvas-icon {
-    display: inline-flex;
-  }
-
   html[data-sidebar="collapsed"] .sidebar-theme .theme-panel-toggle {
     padding-inline: 0.25rem;
     font-size: 0.68rem;
@@ -2764,4 +2688,154 @@ html[data-student-mode="dark"] .navbar .nav-link.active,
 html[data-student-mode="dark"] .sidebar-toggle,
 html[data-student-mode="dark"] .sidebar-theme .theme-panel-toggle {
   color: #f5fbff;
+}
+
+.canvas-link-page {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.school-portal-window {
+  overflow: hidden;
+  border: 2px solid var(--student-line);
+  border-radius: 12px;
+  color: var(--student-ink);
+  background: var(--student-surface-strong);
+}
+
+.school-portal-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--student-line);
+  background: var(--student-surface-soft);
+}
+
+.school-portal-bar strong {
+  margin-right: auto;
+  font-family: "Geist Pixel", sans-serif;
+}
+
+.school-portal-bar > span:last-child {
+  color: var(--student-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.school-portal-dots {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.school-portal-dots i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--student-green);
+}
+
+.school-portal-dots i:nth-child(2) {
+  background: var(--student-cyan);
+}
+
+.school-portal-dots i:nth-child(3) {
+  background: var(--student-purple);
+}
+
+.school-portal-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  min-height: 390px;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+}
+
+.school-portal-mark {
+  display: grid;
+  width: clamp(4rem, 10vw, 6rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--student-cyan) 55%, var(--student-line));
+  border-radius: 50%;
+  color: var(--student-cyan);
+  background: color-mix(in srgb, var(--student-cyan) 10%, transparent);
+}
+
+.school-portal-mark svg {
+  width: 58%;
+}
+
+.school-portal-copy {
+  max-width: 40rem;
+}
+
+.school-portal-copy h2 {
+  margin: 0 0 0.6rem;
+  color: var(--student-ink);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+}
+
+.school-portal-copy > p:last-child {
+  margin: 0;
+  color: var(--student-muted);
+  line-height: 1.6;
+}
+
+.canvas-status-label {
+  margin: 0 0 0.3rem;
+  color: var(--student-cyan) !important;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.school-portal-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.school-portal-preview span {
+  display: block;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--student-surface-soft);
+}
+
+.school-portal-preview span:nth-child(1) {
+  width: 82%;
+}
+
+.school-portal-preview span:nth-child(2) {
+  width: 64%;
+}
+
+.school-portal-preview span:nth-child(3) {
+  width: 72%;
+}
+
+@media (max-width: 720px) {
+  .school-portal-bar > span:last-child {
+    display: none;
+  }
+
+  .school-portal-body {
+    grid-template-columns: 1fr;
+    min-height: 340px;
+    text-align: center;
+  }
+
+  .school-portal-mark {
+    margin: 0 auto;
+  }
+
+  .school-portal-preview {
+    justify-items: center;
+  }
 }

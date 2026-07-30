@@ -20,46 +20,6 @@
         </div>
     </section>
 
-    <section class="schedule-banner weekly-assignment-schedule" aria-labelledby="weekly-assignment-title">
-        <div class="weekly-schedule-header">
-            <div>
-                <h3 id="weekly-assignment-title">Weekly Assignments</h3>
-                <p>{{.CurrentWeekLabel}}</p>
-            </div>
-            <nav class="weekly-schedule-nav" aria-label="Change displayed week">
-                <a href="{{.PreviousWeekURL}}" aria-label="Previous week">&larr;</a>
-                <a href="{{.NextWeekURL}}" aria-label="Next week">&rarr;</a>
-            </nav>
-        </div>
-
-        <div class="weekly-schedule-scroll">
-            <div class="weekly-schedule-grid">
-                {{range .WeeklyAssignmentDays}}
-                <article class="weekly-day {{if .IsToday}}is-today{{end}}">
-                    <header>
-                        <strong>{{.DayName}}</strong>
-                        <time datetime="{{.DateISO}}">{{.DateLabel}}</time>
-                    </header>
-
-                    {{if .Assignments}}
-                    <div class="weekly-assignment-list">
-                        {{range .Assignments}}
-                        <div class="weekly-assignment">
-                            <span>{{.Subject}}</span>
-                            <strong>{{.Title}}</strong>
-                            <small>Due {{.DueTime}}</small>
-                        </div>
-                        {{end}}
-                    </div>
-                    {{else}}
-                    <p class="weekly-day-empty">No assignments</p>
-                    {{end}}
-                </article>
-                {{end}}
-            </div>
-        </div>
-    </section>
-
 </div>
 {{end}}
 

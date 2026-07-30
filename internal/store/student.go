@@ -22,21 +22,14 @@ var (
 	ErrInsufficientCoins       = errors.New("insufficient coins")
 )
 
-// LoadStudentDashboardState loads the shared student data, classroom schedule,
-// and recurring assignment templates needed by the dashboard.
+// LoadStudentDashboardState loads attendance, rewards, avatar, and classroom
+// schedule data needed by the elementary student dashboard.
 func (s *SQLStore) LoadStudentDashboardState(ctx context.Context, user domain.User) (domain.StudentState, error) {
-	state, err := s.loadStudentPageState(ctx, user, true, false)
-	if err != nil {
-		return domain.StudentState{}, err
-	}
-	if err := s.loadWeeklyAssignmentTemplates(ctx, &state); err != nil {
-		return domain.StudentState{}, err
-	}
-	return state, nil
+	return s.loadStudentPageState(ctx, user, true, false)
 }
 
 // LoadStudentAttendanceState loads schedule data needed to calculate an
-// attendance reward without fetching dashboard-only assignment templates.
+// attendance reward.
 func (s *SQLStore) LoadStudentAttendanceState(ctx context.Context, user domain.User) (domain.StudentState, error) {
 	return s.loadStudentPageState(ctx, user, true, false)
 }
@@ -158,38 +151,6 @@ func (s *SQLStore) loadSchedules(ctx context.Context, state *domain.StudentState
 	return rows.Err()
 }
 
-// loadWeeklyAssignmentTemplates reads the recurring classroom assignments used
-// to build the student's current Sunday-through-Saturday dashboard calendar.
-func (s *SQLStore) loadWeeklyAssignmentTemplates(ctx context.Context, state *domain.StudentState) error {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ClassroomID, DueWeekday, Subject, Title,
-			TO_CHAR(DueTime, 'HH24:MI'), DisplayOrder
-		FROM WeeklyAssignmentTemplates
-		WHERE ClassroomID = $1
-		ORDER BY DueWeekday, DisplayOrder, DueTime, Title;
-	`, state.User.ClassroomID)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var assignment domain.WeeklyAssignmentTemplate
-		if err := rows.Scan(
-			&assignment.ClassroomID,
-			&assignment.DueWeekday,
-			&assignment.Subject,
-			&assignment.Title,
-			&assignment.DueTime,
-			&assignment.DisplayOrder,
-		); err != nil {
-			return err
-		}
-		state.WeeklyAssignments = append(state.WeeklyAssignments, assignment)
-	}
-	return rows.Err()
-}
-
 func (s *SQLStore) loadShopItems(ctx context.Context, state *domain.StudentState) error {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT ID, Name, Price, Description, COALESCE(ImagePath, ''), COALESCE(Slot, '')
@@ -298,6 +259,21 @@ func (s *SQLStore) MarkAttendanceAndAwardCoins(ctx context.Context, userID, clas
 		`, userID, classroomID, string(encodedPresent))
 	}
 	if err != nil {
+		return err
+	}
+	// AttendanceMarks is the student's pending indication for teacher review,
+	// not an official decision. Keep it in the same transaction as the legacy
+	// JSON record and reward so partial check-ins cannot be observed.
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO AttendanceMarks
+			(UserID, ClassroomID, AttendanceDate, Status, Source, CheckInAt, UpdatedAt)
+		VALUES ($1, $2, $3, 'present', 'student_checkin', $4, CURRENT_TIMESTAMP)
+		ON CONFLICT (UserID, ClassroomID, AttendanceDate) DO UPDATE SET
+			Status = 'present',
+			Source = 'student_checkin',
+			CheckInAt = EXCLUDED.CheckInAt,
+			UpdatedAt = CURRENT_TIMESTAMP;
+	`, userID, classroomID, date, occurredAt); err != nil {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `

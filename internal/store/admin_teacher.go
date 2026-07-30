@@ -47,7 +47,7 @@ func (s *SQLStore) CreateClassroom(ctx context.Context, classroom domain.Classro
 		return err
 	}
 
-	if err := insertClassroomStudents(ctx, tx, classroom.ID, classroom.StudentIDs); err != nil {
+	if err := replaceClassroomMemberships(ctx, tx, classroom); err != nil {
 		return err
 	}
 
@@ -89,11 +89,70 @@ func (s *SQLStore) UpdateClassroom(ctx context.Context, originalID string, class
 		return err
 	}
 
-	if err := insertClassroomStudents(ctx, tx, classroom.ID, classroom.StudentIDs); err != nil {
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM ClassroomMemberships
+		WHERE ClassroomID = $1 OR ClassroomID = $2;
+	`, originalID, classroom.ID); err != nil {
+		log.Println("Error clearing classroom memberships:", err)
+		return err
+	}
+
+	if err := replaceClassroomMemberships(ctx, tx, classroom); err != nil {
 		return err
 	}
 
 	return tx.Commit()
+}
+
+// replaceClassroomMemberships dual-writes normalized memberships and legacy
+// roster rows so current pages remain compatible throughout the migration.
+func replaceClassroomMemberships(ctx context.Context, tx *sql.Tx, classroom domain.Classroom) error {
+	teacherIDs := classroom.TeacherIDs
+	if len(teacherIDs) == 0 && classroom.TeacherID != "" {
+		teacherIDs = []string{classroom.TeacherID}
+	}
+	for index, teacherID := range teacherIDs {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO ClassroomMemberships
+				(ClassroomID, UserID, MembershipRole, IsPrimary, Active, Source, UpdatedAt)
+			VALUES ($1, $2, 'teacher', $3, true, 'local', CURRENT_TIMESTAMP)
+			ON CONFLICT (ClassroomID, UserID, MembershipRole) DO UPDATE SET
+				IsPrimary = EXCLUDED.IsPrimary,
+				Active = true,
+				UpdatedAt = CURRENT_TIMESTAMP;
+		`, classroom.ID, teacherID, index == 0); err != nil {
+			log.Println("Error inserting classroom teacher membership:", err)
+			return err
+		}
+	}
+
+	if err := insertClassroomStudents(ctx, tx, classroom.ID, classroom.StudentIDs); err != nil {
+		return err
+	}
+	for _, studentID := range classroom.StudentIDs {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO ClassroomMemberships
+				(ClassroomID, UserID, MembershipRole, IsPrimary, Active, Source, UpdatedAt)
+			VALUES ($1, $2, 'student', COALESCE((
+				SELECT COALESCE(NULLIF(ClassroomID, ''), $1) = $1
+				FROM Users WHERE UserID = $2
+			), false), true, 'local', CURRENT_TIMESTAMP)
+			ON CONFLICT (ClassroomID, UserID, MembershipRole) DO UPDATE SET
+				IsPrimary = EXCLUDED.IsPrimary,
+				Active = true,
+				UpdatedAt = CURRENT_TIMESTAMP;
+		`, classroom.ID, studentID); err != nil {
+			log.Println("Error inserting classroom student membership:", err)
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE Users SET ClassroomID = $2
+			WHERE UserID = $1 AND COALESCE(ClassroomID, '') = '';
+		`, studentID, classroom.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func insertClassroomStudents(ctx context.Context, tx *sql.Tx, classroomID string, studentIDs []string) error {

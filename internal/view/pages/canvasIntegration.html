@@ -1,0 +1,97 @@
+{{define "content"}}
+<div class="admin-page-header">
+    <h1>Canvas Roster Import</h1>
+    <p>Connect an administrator account and choose only the courses Attendance Quest should manage.</p>
+</div>
+
+{{if .Message}}<div class="admin-notice">{{.Message}}</div>{{end}}
+{{if .Error}}<div class="admin-notice admin-notice-error">{{.Error}}</div>{{end}}
+
+{{if not .Configured}}
+<div class="admin-form-card">
+    <h2>Canvas OAuth is not configured</h2>
+    <p>Set the Canvas client ID, client secret, redirect URL, and integration credential encryption key before connecting.</p>
+</div>
+{{else}}
+<div class="admin-form-card">
+    <h2>Connect Canvas</h2>
+    <form method="POST" action="/admin/integrations/canvas/connect">
+        <div class="form-group">
+            <label for="canvas-display-name">Connection name</label>
+            <input id="canvas-display-name" name="display_name" value="School Canvas">
+        </div>
+        <div class="form-group">
+            <label for="canvas-base-url">Canvas URL</label>
+            <input id="canvas-base-url" name="base_url" type="url" placeholder="https://school.instructure.com" required>
+        </div>
+        <div class="form-group">
+            <label for="canvas-account-id">Canvas account ID</label>
+            <input id="canvas-account-id" name="account_id" value="self" required>
+            <small>Use the account containing the courses this administrator may import.</small>
+        </div>
+        <button class="admin-submit-btn" type="submit">Authorize Canvas</button>
+    </form>
+</div>
+{{end}}
+
+<div class="admin-form-card">
+    <h2>Connections</h2>
+    {{if .Connections}}
+    <table>
+        <thead><tr><th>Name</th><th>Canvas URL</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+        <tbody>
+        {{range .Connections}}
+        <tr>
+            <td>{{.DisplayName}}</td>
+            <td>{{.BaseURL}}</td>
+            <td><span class="integration-status integration-status-{{.Status}}">{{.Status}}</span></td>
+            <td>{{.UpdatedAt}}</td>
+            <td>
+                <div class="integration-actions">
+                    {{if eq .Status "active"}}
+                    <a class="admin-nav-item" href="/admin/integrations/canvas?connection_id={{.ID}}">Choose courses</a>
+                    <form method="POST" action="/admin/integrations/canvas/sync">
+                        <input type="hidden" name="connection_id" value="{{.ID}}">
+                        <button class="admin-submit-btn" type="submit">Preview sync</button>
+                    </form>
+                    <form method="POST" action="/admin/integrations/canvas/disconnect">
+                        <input type="hidden" name="connection_id" value="{{.ID}}">
+                        <button class="admin-logout-btn" type="submit">Disconnect</button>
+                    </form>
+                    {{end}}
+                </div>
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No Canvas connection has been authorized.</p>
+    {{end}}
+</div>
+
+{{if .ActiveID}}
+<div class="admin-form-card">
+    <h2>Select Canvas courses</h2>
+    <p>Only roster structure is read. Assignments, grades, submissions, and course content are excluded.</p>
+    {{if .Courses}}
+    <form method="POST" action="/admin/integrations/canvas/courses">
+        <input type="hidden" name="connection_id" value="{{.ActiveID}}">
+        <div class="canvas-course-list">
+        {{range .Courses}}
+            <label>
+                <input type="checkbox" name="course_id" value="{{.ID}}" {{if .Selected}}checked{{end}}>
+                <span><strong>{{.Name}}</strong>{{if .SISID}}<small>SIS: {{.SISID}}</small>{{end}}</span>
+            </label>
+        {{end}}
+        </div>
+        <button class="admin-submit-btn" type="submit">Preview selected courses</button>
+    </form>
+    {{else}}
+    <p>No courses were returned for this Canvas administrator and account.</p>
+    {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{template "base" .}}
