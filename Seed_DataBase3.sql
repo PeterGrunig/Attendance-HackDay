@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS schools (
     createdat timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedat timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO schools (id, name) VALUES ('local-default', 'Attendance Quest School')
+INSERT INTO schools (id, name) VALUES ('local-default', 'Demo Elementary School')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE classrooms ADD COLUMN IF NOT EXISTS schoolid text;

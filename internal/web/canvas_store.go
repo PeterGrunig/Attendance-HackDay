@@ -13,6 +13,10 @@ type CanvasIntegrationStore interface {
 	ListIntegrationConnections(context.Context, string) ([]domain.IntegrationConnectionSummary, error)
 	UpdateIntegrationConnection(context.Context, integrations.Connection, string) error
 	DisableIntegrationConnection(context.Context, int64) error
+	UpsertStudentIntegrationConnection(context.Context, string, integrations.Connection) (int64, error)
+	LoadStudentIntegrationConnection(context.Context, string, string) (integrations.Connection, string, error)
+	LoadStudentIntegrationSummary(context.Context, string, string) (domain.IntegrationConnectionSummary, error)
+	DisableStudentIntegrationConnection(context.Context, string, string) error
 	LoadRosterMatchSnapshot(context.Context, int64) (domain.RosterMatchSnapshot, error)
 	ApplyRosterImport(context.Context, domain.RosterImportProposal, map[string]string, string) (domain.RosterImportResult, error)
 	AppendIntegrationAuditEvent(context.Context, domain.IntegrationAuditEvent) (int64, error)

@@ -23,6 +23,11 @@ import (
 
 const canvasFlowLifetime = 15 * time.Minute
 
+const (
+	canvasOAuthPurposeRosterSource = "roster_source"
+	canvasOAuthPurposeStudentLink  = "student_link"
+)
+
 var (
 	canvasClient           *canvas.Client
 	canvasIntegrationStore CanvasIntegrationStore
@@ -32,7 +37,8 @@ var (
 )
 
 type canvasOAuthFlow struct {
-	AdminUserID string
+	UserID      string
+	Purpose     string
 	BaseURL     string
 	AccountID   string
 	DisplayName string
@@ -100,51 +106,16 @@ func ConfigureCanvas(client *canvas.Client) {
 	canvasClient = client
 }
 
-func canvasIntegrationView(w http.ResponseWriter, r *http.Request) {
-	data := canvasIntegrationPageData{
-		Title: "Canvas Integration", HeaderTitle: "Admin Tools",
-		HeaderSubtitle: "Import organizational roster data from Canvas.",
-		HeaderBadge:    "Admin View", Configured: canvasClient != nil && canvasClient.Configured(),
-		Message: r.URL.Query().Get("msg"),
-	}
-	connections, err := canvasIntegrationStore.ListIntegrationConnections(r.Context(), "canvas")
-	if err != nil {
-		data.Error = "Could not load Canvas connections."
-		log.Printf("load Canvas connections: %v", err)
-		renderAdmin(w, "canvasIntegration.html", data)
-		return
-	}
-	for _, connection := range connections {
-		var config canvas.ConnectionConfig
-		_ = json.Unmarshal(connection.Configuration, &config)
-		data.Connections = append(data.Connections, canvasConnectionView{
-			ID: connection.ID, DisplayName: connection.DisplayName, Status: connection.Status,
-			BaseURL: config.BaseURL, UpdatedAt: connection.UpdatedAt.Format("Jan 2, 2006 3:04 PM"),
-		})
-	}
-	if value := r.URL.Query().Get("connection_id"); value != "" {
-		data.ActiveID, _ = strconv.ParseInt(value, 10, 64)
-		connection, _, err := loadReadyCanvasConnection(r.Context(), data.ActiveID)
-		if err != nil {
-			data.Error = integrationMessage(err)
-		} else {
-			courses, err := canvasClient.ListCourses(r.Context(), connection)
-			if err != nil {
-				data.Error = integrationMessage(err)
-			} else {
-				var config canvas.ConnectionConfig
-				_ = json.Unmarshal(connection.Configuration, &config)
-				selected := stringSet(config.SelectedCourseIDs)
-				for _, course := range courses {
-					data.Courses = append(data.Courses, canvasCourseView{
-						ID: course.ExternalID, Name: course.Name, SISID: course.SISID, Selected: selected[course.ExternalID],
-					})
-				}
-				sort.Slice(data.Courses, func(i, j int) bool { return data.Courses[i].Name < data.Courses[j].Name })
-			}
-		}
-	}
-	renderAdmin(w, "canvasIntegration.html", data)
+// canvasIntegrationView intentionally renders a provider-neutral preview while
+// roster onboarding is paused; it performs no provider or database operations.
+func canvasIntegrationView(w http.ResponseWriter, _ *http.Request) {
+	renderAdmin(w, "adminIntegrationPlaceholder.html", adminIntegrationPlaceholderData{
+		Title:           "Roster Connection",
+		HeaderTitle:     "School Connections",
+		HeaderSubtitle:  "Preview where an existing school roster could be connected.",
+		HeaderBadge:     "Presentation",
+		PlaceholderKind: "roster",
+	})
 }
 
 // canvasConnect starts an administrator-bound OAuth flow. The state record
@@ -165,7 +136,8 @@ func canvasConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	flow := canvasOAuthFlow{
-		AdminUserID: user.UserID,
+		UserID:      user.UserID,
+		Purpose:     canvasOAuthPurposeRosterSource,
 		BaseURL:     strings.TrimSpace(r.FormValue("base_url")),
 		AccountID:   strings.TrimSpace(r.FormValue("account_id")),
 		DisplayName: strings.TrimSpace(r.FormValue("display_name")),
@@ -192,18 +164,30 @@ func canvasOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	flow, ok := canvasOAuthFlows[state]
 	delete(canvasOAuthFlows, state)
 	canvasFlowMu.Unlock()
-	if !ok || flow.AdminUserID != user.UserID || time.Now().After(flow.ExpiresAt) {
-		redirectCanvas(w, r, "Canvas authorization expired or was not started by this administrator.")
+	if !ok || flow.UserID != user.UserID || time.Now().After(flow.ExpiresAt) {
+		redirectCanvasOAuth(w, r, user.Role, flow.Purpose, "Canvas authorization expired or was not started from this account.")
 		return
 	}
 	if providerError := r.URL.Query().Get("error"); providerError != "" {
-		redirectCanvas(w, r, "Canvas authorization was not approved.")
+		redirectCanvasOAuth(w, r, user.Role, flow.Purpose, "Canvas authorization was not approved.")
 		return
 	}
 	credentials, err := canvasClient.ExchangeCode(r.Context(), flow.BaseURL, r.URL.Query().Get("code"))
 	if err != nil {
-		log.Printf("Canvas OAuth token exchange failed admin_user_id=%q: %v", user.UserID, err)
-		redirectCanvas(w, r, integrationMessage(err))
+		log.Printf("Canvas OAuth token exchange failed user_id=%q purpose=%q: %v", user.UserID, flow.Purpose, err)
+		redirectCanvasOAuth(w, r, user.Role, flow.Purpose, integrationMessage(err))
+		return
+	}
+	if flow.Purpose == canvasOAuthPurposeStudentLink {
+		if user.Role != "student" {
+			http.Error(w, "student Canvas authorization requires a student account", http.StatusForbidden)
+			return
+		}
+		completeStudentCanvasOAuth(w, r, user, flow, credentials)
+		return
+	}
+	if flow.Purpose != canvasOAuthPurposeRosterSource || user.Role != "admin" {
+		http.Error(w, "invalid Canvas authorization purpose", http.StatusForbidden)
 		return
 	}
 	configJSON, _ := json.Marshal(canvas.ConnectionConfig{BaseURL: strings.TrimRight(flow.BaseURL, "/"), AccountID: flow.AccountID})
@@ -226,6 +210,14 @@ func canvasOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	appendCanvasAudit(r, user.UserID, "connection.created", connectionID, map[string]any{"provider": "canvas"})
 	log.Printf("Canvas connection created connection_id=%d admin_user_id=%q", connectionID, user.UserID)
 	http.Redirect(w, r, "/admin/integrations/canvas?connection_id="+strconv.FormatInt(connectionID, 10)+"&msg="+url.QueryEscape("Canvas connected."), http.StatusSeeOther)
+}
+
+func redirectCanvasOAuth(w http.ResponseWriter, r *http.Request, role, purpose, message string) {
+	if purpose == canvasOAuthPurposeStudentLink || role == "student" {
+		redirectStudentCanvas(w, r, "", message)
+		return
+	}
+	redirectCanvas(w, r, message)
 }
 
 func canvasDisconnect(w http.ResponseWriter, r *http.Request) {

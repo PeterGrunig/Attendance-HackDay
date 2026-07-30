@@ -59,67 +59,16 @@ type attendanceMappingPageData struct {
 	Error          string
 }
 
-func attendanceExportView(w http.ResponseWriter, r *http.Request) {
-	data := attendanceExportPageData{
-		Title: "Attendance Exports", HeaderTitle: "Attendance Exports",
-		HeaderSubtitle: "Configure a destination and monitor official attendance delivery.",
-		HeaderBadge:    "Admin View", Message: r.URL.Query().Get("msg"),
-		Error: r.URL.Query().Get("error"),
-	}
-	token, err := getCSRFToken(r)
-	if err != nil {
-		http.Error(w, "could not secure export forms", http.StatusInternalServerError)
-		return
-	}
-	data.CSRFToken = token
-
-	if attendanceRegistry != nil {
-		for _, metadata := range attendanceRegistry.List() {
-			provider, providerErr := attendanceRegistry.Get(metadata.Kind)
-			_, isDestination := provider.(integrations.AttendanceDestination)
-			if providerErr != nil || !isDestination ||
-				!metadata.Supports(integrations.CapabilityAttendanceWrite) ||
-				(!metadata.Supports(integrations.CapabilityAttendanceSafeUpsert) &&
-					!metadata.Supports(integrations.CapabilityAttendanceCorrections)) {
-				continue
-			}
-			data.Providers = append(data.Providers, attendanceDestinationProviderView{
-				Kind: metadata.Kind, DisplayName: metadata.DisplayName,
-				Capabilities: capabilitySummary(metadata),
-			})
-		}
-	}
-	connections, err := attendanceExportStore.ListAttendanceDestinationConnections(r.Context())
-	if err != nil {
-		log.Printf("attendance export admin failed: stage=list_connections error=%v", err)
-		data.Error = "Could not load attendance destinations."
-		renderAdmin(w, "attendanceExports.html", data)
-		return
-	}
-	for _, connection := range connections {
-		var config integrations.AttendanceDestinationConfiguration
-		_ = json.Unmarshal(connection.Configuration, &config)
-		capabilities := "Adapter unavailable"
-		if attendanceRegistry != nil {
-			if provider, providerErr := attendanceRegistry.Get(connection.ProviderKind); providerErr == nil {
-				capabilities = capabilitySummary(provider.Metadata())
-			}
-		}
-		data.Connections = append(data.Connections, attendanceDestinationConnectionView{
-			ID: connection.ID, DisplayName: connection.DisplayName,
-			Provider: connection.ProviderKind, Status: connection.Status,
-			Capabilities: capabilities,
-			PresentCode:  config.Codes[integrations.AttendancePresent],
-			AbsentCode:   config.Codes[integrations.AttendanceAbsent],
-			UpdatedAt:    connection.UpdatedAt.Format("Jan 2, 2006 3:04 PM"),
-		})
-	}
-	data.Queue, err = attendanceExportStore.ListAttendanceExportQueue(r.Context(), 100)
-	if err != nil {
-		log.Printf("attendance export admin failed: stage=list_queue error=%v", err)
-		data.Error = "Could not load the attendance export queue."
-	}
-	renderAdmin(w, "attendanceExports.html", data)
+// attendanceExportView presents the planned official-records workflow without
+// loading destinations, credentials, mappings, or delivery failures.
+func attendanceExportView(w http.ResponseWriter, _ *http.Request) {
+	renderAdmin(w, "adminIntegrationPlaceholder.html", adminIntegrationPlaceholderData{
+		Title:           "Official Records",
+		HeaderTitle:     "School Connections",
+		HeaderSubtitle:  "Preview how approved attendance could reach an official system.",
+		HeaderBadge:     "Presentation",
+		PlaceholderKind: "records",
+	})
 }
 
 // attendanceDestinationCreate validates both adapter behavior and code
@@ -280,43 +229,13 @@ func attendanceExportRetry(w http.ResponseWriter, r *http.Request) {
 	redirectExports(w, r, "Manual attendance export completed.", "")
 }
 
-func attendanceDestinationMappingsView(w http.ResponseWriter, r *http.Request) {
-	connectionID, err := strconv.ParseInt(r.URL.Query().Get("connection_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "invalid connection", http.StatusBadRequest)
-		return
-	}
-	connection, _, err := attendanceExportStore.LoadIntegrationConnection(r.Context(), connectionID)
-	if err != nil || connection.Role != integrations.ConnectionRoleAttendanceDestination {
-		http.Error(w, "attendance destination not found", http.StatusNotFound)
-		return
-	}
-	token, err := getCSRFToken(r)
-	if err != nil {
-		http.Error(w, "could not secure mapping form", http.StatusInternalServerError)
-		return
-	}
-	if err := attendanceExportStore.SeedAttendanceDestinationMappings(r.Context(), connectionID); err != nil {
-		log.Printf("attendance destination SIS mapping seed failed: connection_id=%d error=%v", connectionID, err)
-	}
-	mappings, err := attendanceExportStore.ListAttendanceDestinationMappings(r.Context(), connectionID)
-	if err != nil {
-		http.Error(w, "could not load destination mappings", http.StatusInternalServerError)
-		return
-	}
-	missing := 0
-	for _, mapping := range mappings {
-		if mapping.ExternalID == "" {
-			missing++
-		}
-	}
-	renderAdmin(w, "attendanceMappings.html", attendanceMappingPageData{
-		Title: "Attendance Identifier Mappings", HeaderTitle: "Attendance Exports",
-		HeaderSubtitle: "Match Attendance Quest records to official Ed-Fi identifiers.",
-		HeaderBadge:    "Admin View", CSRFToken: token,
-		ConnectionID: connectionID, ConnectionName: connection.DisplayName,
-		ProviderKind: connection.ProviderKind, Mappings: mappings, MissingCount: missing,
-		Message: r.URL.Query().Get("msg"), Error: r.URL.Query().Get("error"),
+func attendanceDestinationMappingsView(w http.ResponseWriter, _ *http.Request) {
+	renderAdmin(w, "adminIntegrationPlaceholder.html", adminIntegrationPlaceholderData{
+		Title:           "Identifier Matching",
+		HeaderTitle:     "School Connections",
+		HeaderSubtitle:  "Preview how local records could match a school's official identifiers.",
+		HeaderBadge:     "Presentation",
+		PlaceholderKind: "mapping",
 	})
 }
 

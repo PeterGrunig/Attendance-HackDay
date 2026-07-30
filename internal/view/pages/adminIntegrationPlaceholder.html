@@ -1,0 +1,67 @@
+{{define "content"}}
+<div class="admin-page-header">
+    {{if eq .PlaceholderKind "roster"}}
+    <h1>Roster connection</h1>
+    <p>A provider-neutral preview for bringing existing school structure into Attendance Quest.</p>
+    {{else if eq .PlaceholderKind "mapping"}}
+    <h1>Identifier matching</h1>
+    <p>A future connection can match Attendance Quest records without changing local IDs.</p>
+    {{else}}
+    <h1>Official records connection</h1>
+    <p>A provider-neutral preview for sending approved attendance to a school's system of record.</p>
+    {{end}}
+</div>
+
+<section class="integration-placeholder" aria-labelledby="integration-placeholder-title">
+    <header class="integration-placeholder-bar">
+        <span class="integration-placeholder-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <strong id="integration-placeholder-title">
+            {{if eq .PlaceholderKind "roster"}}School roster source
+            {{else if eq .PlaceholderKind "mapping"}}Record matching
+            {{else}}Official attendance destination{{end}}
+        </strong>
+        <span>Future connection</span>
+    </header>
+
+    <div class="integration-placeholder-body">
+        {{if eq .PlaceholderKind "mapping"}}
+        <div class="integration-mapping-preview" aria-hidden="true">
+            <div><strong>School</strong><span>Local school</span><i></i><span>Official school ID</span></div>
+            <div><strong>Class</strong><span>Local classroom</span><i></i><span>Official section ID</span></div>
+            <div><strong>Student</strong><span>Local student</span><i></i><span>Official student ID</span></div>
+        </div>
+        <p class="integration-placeholder-note">Stored mappings can remain provider-neutral so a school can choose its own roster and attendance systems later.</p>
+        <a class="integration-placeholder-link" href="/admin/integrations/attendance">Back to official records</a>
+        {{else}}
+        <div class="integration-placeholder-intro">
+            <span class="integration-placeholder-mark" aria-hidden="true">{{if eq .PlaceholderKind "roster"}}+{{else}}&gt;{{end}}</span>
+            <div>
+                <p class="integration-placeholder-label">Reserved workspace</p>
+                {{if eq .PlaceholderKind "roster"}}
+                <h2>Import what the school has already organized.</h2>
+                <p>A future connection can supply schools, classes, teachers, students, and memberships without tying this screen to one provider.</p>
+                {{else}}
+                <h2>Approved attendance could move from here.</h2>
+                <p>The existing Attendance page remains the place teachers and admins review records. A future adapter can deliver those approved results to the school's official system.</p>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="integration-placeholder-flow">
+            {{if eq .PlaceholderKind "roster"}}
+            <article><span>1</span><strong>Choose a school system</strong><small>Connect a supported roster source.</small></article>
+            <article><span>2</span><strong>Review the roster</strong><small>Preview classes and memberships.</small></article>
+            <article><span>3</span><strong>Confirm the import</strong><small>Keep local attendance and rewards intact.</small></article>
+            {{else}}
+            <article><span>1</span><strong>Approve attendance</strong><small>Finalize a complete daily class roster.</small></article>
+            <article><span>2</span><strong>Prepare delivery</strong><small>Map school, class, and student identifiers.</small></article>
+            <article><span>3</span><strong>Record officially</strong><small>Send safely and retain delivery history.</small></article>
+            {{end}}
+        </div>
+        {{if eq .PlaceholderKind "records"}}<a class="integration-placeholder-link" href="/attendance/approval">Open attendance review</a>{{end}}
+        {{end}}
+    </div>
+</section>
+{{end}}
+
+{{template "base" .}}

@@ -15,10 +15,15 @@ import (
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations"
 )
 
+// canvasIdentityScope asks Canvas for authentication identity only, without
+// granting the student link access to LMS API resources.
+const canvasIdentityScope = "/auth/userinfo"
+
 type Client struct {
 	ClientID     string
 	ClientSecret string
 	RedirectURL  string
+	BaseURL      string
 	HTTPClient   *http.Client
 }
 
@@ -26,12 +31,16 @@ type ConnectionConfig struct {
 	BaseURL           string   `json:"base_url"`
 	AccountID         string   `json:"account_id"`
 	SelectedCourseIDs []string `json:"selected_course_ids"`
+	LinkedUserID      string   `json:"linked_user_id,omitempty"`
+	LinkedUserName    string   `json:"linked_user_name,omitempty"`
 }
 
 type Credentials struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
+	CanvasUserID int64     `json:"canvas_user_id,omitempty"`
+	CanvasName   string    `json:"canvas_name,omitempty"`
 }
 
 type courseResponse struct {
@@ -45,6 +54,17 @@ type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int    `json:"expires_in"`
+	User         struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	} `json:"user"`
+}
+
+type profileResponse struct {
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	PrimaryEmail string `json:"primary_email"`
+	LoginID      string `json:"login_id"`
 }
 
 type enrollment struct {
@@ -66,11 +86,12 @@ type rosterCursor struct {
 	NextURL     string `json:"next_url"`
 }
 
-func New(clientID, clientSecret, redirectURL string) *Client {
+func New(clientID, clientSecret, redirectURL, baseURL string) *Client {
 	return &Client{
 		ClientID:     strings.TrimSpace(clientID),
 		ClientSecret: strings.TrimSpace(clientSecret),
 		RedirectURL:  strings.TrimSpace(redirectURL),
+		BaseURL:      strings.TrimSpace(baseURL),
 		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -88,7 +109,33 @@ func (c *Client) Configured() bool {
 	return c != nil && c.ClientID != "" && c.ClientSecret != "" && c.RedirectURL != ""
 }
 
+// StudentConfigured adds the one-school Canvas URL requirement to the shared
+// OAuth client settings used by administrator and student flows.
+func (c *Client) StudentConfigured() bool {
+	if !c.Configured() {
+		return false
+	}
+	_, err := normalizeBaseURL(c.BaseURL)
+	return err == nil
+}
+
+func (c *Client) DefaultBaseURL() string {
+	baseURL, err := normalizeBaseURL(c.BaseURL)
+	if err != nil {
+		return ""
+	}
+	return baseURL
+}
+
 func (c *Client) AuthorizationURL(baseURL, state string) (string, error) {
+	return c.authorizationURL(baseURL, state, "")
+}
+
+func (c *Client) IdentityAuthorizationURL(baseURL, state string) (string, error) {
+	return c.authorizationURL(baseURL, state, canvasIdentityScope)
+}
+
+func (c *Client) authorizationURL(baseURL, state, scope string) (string, error) {
 	base, err := normalizeBaseURL(baseURL)
 	if err != nil || !c.Configured() {
 		return "", fmt.Errorf("%w: Canvas OAuth is not configured", integrations.ErrInvalidConfiguration)
@@ -98,6 +145,9 @@ func (c *Client) AuthorizationURL(baseURL, state string) (string, error) {
 		"response_type": {"code"},
 		"redirect_uri":  {c.RedirectURL},
 		"state":         {state},
+	}
+	if scope != "" {
+		query.Set("scope", scope)
 	}
 	return base + "/login/oauth2/auth?" + query.Encode(), nil
 }
@@ -121,7 +171,15 @@ func (c *Client) Refresh(ctx context.Context, baseURL string, current Credential
 		"redirect_uri":  {c.RedirectURL},
 		"refresh_token": {current.RefreshToken},
 	}
-	return c.exchangeToken(ctx, baseURL, values, current.RefreshToken)
+	refreshed, err := c.exchangeToken(ctx, baseURL, values, current.RefreshToken)
+	if err != nil {
+		return Credentials{}, err
+	}
+	if refreshed.CanvasUserID == 0 {
+		refreshed.CanvasUserID = current.CanvasUserID
+		refreshed.CanvasName = current.CanvasName
+	}
+	return refreshed, nil
 }
 
 func (c *Client) exchangeToken(ctx context.Context, baseURL string, values url.Values, retainedRefreshToken string) (Credentials, error) {
@@ -153,18 +211,53 @@ func (c *Client) exchangeToken(ctx context.Context, baseURL string, values url.V
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		ExpiresAt:    time.Now().Add(time.Duration(token.ExpiresIn) * time.Second),
+		CanvasUserID: token.User.ID,
+		CanvasName:   token.User.Name,
+	}, nil
+}
+
+func (c Credentials) Identity() (integrations.Person, error) {
+	if c.CanvasUserID <= 0 {
+		return integrations.Person{}, fmt.Errorf("%w: Canvas identity response is missing a user identifier", integrations.ErrAuthentication)
+	}
+	return integrations.Person{
+		ExternalID: strconv.FormatInt(c.CanvasUserID, 10),
+		Name:       c.CanvasName,
+		Role:       integrations.PersonRoleStudent,
+		Active:     true,
 	}, nil
 }
 
 func (c *Client) ValidateConnection(ctx context.Context, connection integrations.Connection) error {
+	_, err := c.CurrentPerson(ctx, connection)
+	return err
+}
+
+// CurrentPerson validates an OAuth token against Canvas and returns only the
+// normalized identity fields needed to label an owner-scoped student link.
+func (c *Client) CurrentPerson(ctx context.Context, connection integrations.Connection) (integrations.Person, error) {
 	config, credentials, err := decodeConnection(connection)
 	if err != nil {
-		return err
+		return integrations.Person{}, err
 	}
-	var current struct {
-		ID int64 `json:"id"`
+	var profile profileResponse
+	if err := c.getJSON(ctx, config.BaseURL+"/api/v1/users/self/profile", credentials.AccessToken, &profile, nil); err != nil {
+		return integrations.Person{}, err
 	}
-	return c.getJSON(ctx, config.BaseURL+"/api/v1/users/self", credentials.AccessToken, &current, nil)
+	if profile.ID <= 0 {
+		return integrations.Person{}, fmt.Errorf("%w: Canvas profile is missing an identifier", integrations.ErrPermanentRejection)
+	}
+	email := profile.PrimaryEmail
+	if email == "" {
+		email = profile.LoginID
+	}
+	return integrations.Person{
+		ExternalID: strconv.FormatInt(profile.ID, 10),
+		Name:       profile.Name,
+		Email:      email,
+		Role:       integrations.PersonRoleStudent,
+		Active:     true,
+	}, nil
 }
 
 // ListCourses returns account-visible courses and follows Canvas Link headers

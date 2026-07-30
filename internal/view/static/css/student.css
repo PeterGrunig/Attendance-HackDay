@@ -2689,3 +2689,153 @@ html[data-student-mode="dark"] .sidebar-toggle,
 html[data-student-mode="dark"] .sidebar-theme .theme-panel-toggle {
   color: #f5fbff;
 }
+
+.canvas-link-page {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.school-portal-window {
+  overflow: hidden;
+  border: 2px solid var(--student-line);
+  border-radius: 12px;
+  color: var(--student-ink);
+  background: var(--student-surface-strong);
+}
+
+.school-portal-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--student-line);
+  background: var(--student-surface-soft);
+}
+
+.school-portal-bar strong {
+  margin-right: auto;
+  font-family: "Geist Pixel", sans-serif;
+}
+
+.school-portal-bar > span:last-child {
+  color: var(--student-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.school-portal-dots {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.school-portal-dots i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--student-green);
+}
+
+.school-portal-dots i:nth-child(2) {
+  background: var(--student-cyan);
+}
+
+.school-portal-dots i:nth-child(3) {
+  background: var(--student-purple);
+}
+
+.school-portal-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  min-height: 390px;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+}
+
+.school-portal-mark {
+  display: grid;
+  width: clamp(4rem, 10vw, 6rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--student-cyan) 55%, var(--student-line));
+  border-radius: 50%;
+  color: var(--student-cyan);
+  background: color-mix(in srgb, var(--student-cyan) 10%, transparent);
+}
+
+.school-portal-mark svg {
+  width: 58%;
+}
+
+.school-portal-copy {
+  max-width: 40rem;
+}
+
+.school-portal-copy h2 {
+  margin: 0 0 0.6rem;
+  color: var(--student-ink);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+}
+
+.school-portal-copy > p:last-child {
+  margin: 0;
+  color: var(--student-muted);
+  line-height: 1.6;
+}
+
+.canvas-status-label {
+  margin: 0 0 0.3rem;
+  color: var(--student-cyan) !important;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.school-portal-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.school-portal-preview span {
+  display: block;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--student-surface-soft);
+}
+
+.school-portal-preview span:nth-child(1) {
+  width: 82%;
+}
+
+.school-portal-preview span:nth-child(2) {
+  width: 64%;
+}
+
+.school-portal-preview span:nth-child(3) {
+  width: 72%;
+}
+
+@media (max-width: 720px) {
+  .school-portal-bar > span:last-child {
+    display: none;
+  }
+
+  .school-portal-body {
+    grid-template-columns: 1fr;
+    min-height: 340px;
+    text-align: center;
+  }
+
+  .school-portal-mark {
+    margin: 0 auto;
+  }
+
+  .school-portal-preview {
+    justify-items: center;
+  }
+}

@@ -63,6 +63,7 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("POST /avatar/preview", RequireRole(http.HandlerFunc(avatarPreviewView), "student"))
 	mux.Handle("POST /avatar", RequireRole(http.HandlerFunc(avatarSaveView), "student"))
 	mux.Handle("POST /attendance", RequireRole(http.HandlerFunc(attendanceView), "student"))
+	mux.Handle("GET /student/integrations/canvas", RequireRole(http.HandlerFunc(studentCanvasView), "student"))
 
 	// teacher routes
 	mux.Handle("GET /teacherDashboard", RequireRole(http.HandlerFunc(teacherView), "teacher"))
@@ -85,20 +86,9 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("GET /userSettings", RequireRole(http.HandlerFunc(userSettingsView), "admin"))
 	mux.Handle("POST /userSettings/role", RequireRole(http.HandlerFunc(updateUserRoleView), "admin"))
 	mux.Handle("GET /admin/integrations/canvas", RequireRole(http.HandlerFunc(canvasIntegrationView), "admin"))
-	mux.Handle("POST /admin/integrations/canvas/connect", RequireRole(http.HandlerFunc(canvasConnect), "admin"))
-	mux.Handle("GET /admin/integrations/canvas/callback", RequireRole(http.HandlerFunc(canvasOAuthCallback), "admin"))
-	mux.Handle("POST /admin/integrations/canvas/disconnect", RequireRole(http.HandlerFunc(canvasDisconnect), "admin"))
-	mux.Handle("POST /admin/integrations/canvas/courses", RequireRole(http.HandlerFunc(canvasSelectCourses), "admin"))
-	mux.Handle("GET /admin/integrations/canvas/preview", RequireRole(http.HandlerFunc(canvasPreview), "admin"))
-	mux.Handle("POST /admin/integrations/canvas/sync", RequireRole(http.HandlerFunc(canvasSync), "admin"))
-	mux.Handle("POST /admin/integrations/canvas/import", RequireRole(http.HandlerFunc(canvasConfirmImport), "admin"))
+	mux.Handle("GET /admin/integrations/canvas/preview", RequireRole(http.HandlerFunc(canvasIntegrationView), "admin"))
 	mux.Handle("GET /admin/integrations/attendance", RequireRole(http.HandlerFunc(attendanceExportView), "admin"))
-	mux.Handle("POST /admin/integrations/attendance/connect", RequireRole(http.HandlerFunc(attendanceDestinationCreate), "admin"))
-	mux.Handle("POST /admin/integrations/attendance/validate", RequireRole(http.HandlerFunc(attendanceDestinationValidate), "admin"))
-	mux.Handle("POST /admin/integrations/attendance/disable", RequireRole(http.HandlerFunc(attendanceDestinationDisable), "admin"))
-	mux.Handle("POST /admin/integrations/attendance/retry", RequireRole(http.HandlerFunc(attendanceExportRetry), "admin"))
 	mux.Handle("GET /admin/integrations/attendance/mappings", RequireRole(http.HandlerFunc(attendanceDestinationMappingsView), "admin"))
-	mux.Handle("POST /admin/integrations/attendance/mappings", RequireRole(http.HandlerFunc(attendanceDestinationMappingsSave), "admin"))
 
 	return mux
 }

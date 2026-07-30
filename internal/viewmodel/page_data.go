@@ -100,4 +100,11 @@ type PageData struct {
 	AvatarMessage          string
 	AvatarError            string
 	ShowAvatarPreview      bool
+	CanvasConfigured       bool
+	CanvasConnected        bool
+	CanvasAccountName      string
+	CanvasBaseURL          string
+	CanvasMessage          string
+	CanvasError            string
+	CanvasCSRFToken        string
 }

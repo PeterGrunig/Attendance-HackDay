@@ -97,7 +97,7 @@ func (s *SQLStore) ListIntegrationConnections(ctx context.Context, providerKind 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT IntegrationConnectionID, ProviderKind, ConnectionRole, DisplayName, Status, Configuration, UpdatedAt
 		FROM IntegrationConnections
-		WHERE ProviderKind = $1
+		WHERE ProviderKind = $1 AND ConnectionRole = 'roster_source'
 		ORDER BY IntegrationConnectionID;
 	`, providerKind)
 	if err != nil {

@@ -1,5 +1,13 @@
 -- Base PostgreSQL seed. Re-runnable: it drops the demo tables and recreates them.
 DROP TABLE IF EXISTS
+    integrationauditevents,
+    attendancedeliveryattempts,
+    attendancebatchentries,
+    attendancebatches,
+    attendancemarks,
+    externalentitymappings,
+    integrationconnections,
+    classroommemberships,
     classroomstudents,
     ownedshopitems,
     avatarconfigs,
@@ -11,7 +19,8 @@ DROP TABLE IF EXISTS
     manualcoinadjustments,
     avatarbaseimages,
     users,
-    classrooms;
+    classrooms,
+    schools;
 
 CREATE TABLE users (
     userid text PRIMARY KEY,
@@ -85,24 +94,26 @@ INSERT INTO users (userid, name, role, email, passwordhash, classroomid) VALUES
 ('DHoney', 'Dylan Steenhoek', 'teacher', 'DHoney@example.com', '$2a$10$lSkGtrwXNpsriRUxhgGor.nLddrL0hiCjGtW/TEQ.NGC99j6xN5DW', ''),
 ('JRGRUNIG', 'Jed Grunig', 'teacher', 'jed@example.com', '$2a$10$89jnZG5yC7yjXyJEae/8xOiQ3PEP4HAtVc0gxKX6lqw6DCO7KNQqO', ''),
 ('PeteGrunigi', 'Peter Grunig', 'admin', 'petergrunig@gmail.com', '$2a$10$aGGj2pW8PFXJ/IjO0PESbe0rESTEnAopD9WYt.Qw25N/vg9vFVunq', ''),
-('admin1', 'Test Admin', 'admin', 'admin@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', ''),
+('admin1', 'Demo Administrator', 'admin', 'admin@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', ''),
 ('jb', 'Joey', 'student', 'jb@example.com', '$2a$10$3fBFhi5ZfE4v7u/yehwR8uNqbqSY35PrYsnXxrYSV35ePJr5MunnC', 'classroom1'),
 ('sconner1', 'Seth Conner', 'student', 'sconner1@example.com', '$2a$10$ExSwVRKGZf99Q571Qe30Uuh/ecKQyupGFSqWfus2GiE0c8dejGXty', ''),
-('student1', 'Test Student', 'student', 'student@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', 'classroom1'),
-('teacher1', 'Test Teacher', 'teacher', 'teacher@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', ''),
+('student1', 'Demo Student', 'student', 'student@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', 'classroom1'),
+('student2', 'Demo Student Two', 'student', 'student2@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', 'classroom2'),
+('student3', 'Demo Student Three', 'student', 'student3@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', 'classroom2'),
+('teacher1', 'Demo Teacher', 'teacher', 'teacher@example.com', '$2a$10$j7TaLACJVyfoNgoiimtyy.b/PR.75ri.RZeEVoU.EBdyFHwjDwWxS', ''),
 ('test', 'test2', 'teacher', 'hey@gmail.com', '$2a$10$GWPCqQ9BvUTWxFGNMYZhWOBl0v1m/9v0gfpajldzD4XsYhw6LJCYa', '');
 
 INSERT INTO classrooms (id, name, teacherid) VALUES
-('classroom1', '1st Grade', 'sconner1'),
-('classroom2', '5th Grade', 'JRGRUNIG'),
-('classroom3', '2nd Grade', 'DHoney');
+('classroom1', 'Grade 1 - Room A', 'teacher1'),
+('classroom2', 'Grade 5 - Room B', 'JRGRUNIG'),
+('classroom3', 'Grade 2 - Room C', 'DHoney');
 
 INSERT INTO classroomstudents (classroomid, studentid) VALUES
 ('classroom1', 'student1'),
 ('classroom1', 'jb'),
 ('classroom1', 'BenJam'),
-('classroom2', 'student3'),
-('classroom2', 'student4');
+('classroom2', 'student2'),
+('classroom2', 'student3');
 
 INSERT INTO shopitems (id, name, price, description) VALUES
 ('cape_gold', 'Golden Cape', 12, 'A shiny cape for extra style.'),

@@ -1,10 +1,11 @@
 # Integration Architecture and Operations
 
-Attendance Quest integrates with external systems only to avoid duplicate
-roster setup and to deliver teacher-approved attendance. It remains an
-elementary attendance-and-rewards application: students do not connect provider
-accounts, open embedded LMS pages, or view assignments, grades, submissions, or
-course content.
+Attendance Quest integrates with external systems to avoid duplicate roster
+setup and deliver teacher-approved attendance. It remains an elementary
+attendance-and-rewards application: Attendance Quest does not import or
+recreate assignments, grades, submissions, or course content. The student
+School Portal and admin connection screens are currently static placeholders
+with no external connection. The Attendance review remains functional.
 
 ## Architecture
 
@@ -27,7 +28,8 @@ side. These may be different systems for the same school.
 
 ```mermaid
 flowchart LR
-    CA[Administrator] --> CP[Canvas roster preview]
+    CA[Administrator] --> CP[Provider-neutral roster placeholder]
+    ST[Student] --> SP[Static School Portal placeholder]
     CP -->|confirm| R[(Schools, classes, users,\nmemberships and mappings)]
     SC[Student check-in] --> AM[(Attendance mark)]
     SC --> RW[(Reward transaction)]
@@ -35,7 +37,7 @@ flowchart LR
     AM --> TA
     TA -->|approve or correct| AB[(Immutable versioned batch)]
     AB --> OB[Export outbox]
-    OB --> ED[Ed-Fi attendance destination]
+    OB --> ED[Dormant attendance adapter]
     ED -->|per-student result and record ID| AB
     CP --> AU[(Integration audit events)]
     TA --> AU
@@ -54,6 +56,16 @@ Apply `Seed_DataBase3.sql` before deploying code that uses these integration
 stores. The application never runs that migration automatically. It is
 idempotent and additive: existing users, classrooms, attendance history,
 rewards, and local-only classes remain intact.
+
+`Seed_DataBase4.sql` is retained for the dormant owner-scoped student connection
+prototype. The static School Portal does not use those records, so this
+migration is not required to display the placeholder. Apply it only before
+re-enabling persisted student provider links. The application never runs it
+automatically.
+
+The seed chain creates a generic `Demo Elementary School` and consistent local
+teacher/student memberships. It does not seed a provider kind, external
+credential, destination mapping, or official-system identifier.
 
 ## Credential encryption
 
@@ -77,39 +89,44 @@ Existing ciphertext is never overwritten when it cannot be decrypted. Do not
 replace a key after credentials have been stored unless those rows are first
 re-encrypted through a planned rotation process.
 
-Canvas OAuth also requires:
+The dormant Canvas adapter can use:
 
 ```text
 CANVAS_CLIENT_ID=<Canvas developer key client ID>
 CANVAS_CLIENT_SECRET=<Canvas developer key secret>
-CANVAS_REDIRECT_URL=https://attendance.example/admin/integrations/canvas/callback
+CANVAS_REDIRECT_URL=https://attendance.example/integrations/canvas/callback
 ```
 
-The redirect URL must exactly match the callback configured in Canvas.
+A Canvas or site administrator would need to create and enable a Developer Key
+before that adapter is re-enabled. The current presentation placeholder does
+not read these settings or expose an authorization control.
+The older `/admin/integrations/canvas/callback` route remains available for
+existing developer-key configurations, but new configurations should use the
+role-neutral callback shown above.
 
-## Canvas roster setup
+## Admin connection placeholders
 
-1. Apply `Seed_DataBase3.sql`, configure the encryption key, and configure the
-   Canvas OAuth variables.
-2. In **Admin → Canvas Import**, enter the school Canvas URL, account ID, and a
-   local connection name.
-3. Authorize an administrator whose Canvas account can read the intended
-   courses and enrollments.
-4. Select courses and generate a preview.
-5. Review every suggested match, then confirm the import.
-6. Use **Preview sync** later to run another manual synchronization.
+**Roster Connection**, **Official Records**, and **Identifier Matching** are
+presentation-only admin screens. They do not load connections, credentials,
+provider health, mappings, import previews, queues, or errors. Their former
+OAuth, import, destination, retry, and mapping mutation routes are not
+registered.
 
-Canvas imports schools, classes, teachers, students, and memberships only.
-Canvas passwords are never requested or imported. New people receive pending
-Attendance Quest accounts so local invitations and credentials remain under
-local control.
+The retained provider-neutral contracts and Canvas/Ed-Fi adapter code are
+implementation references for a later school-selected integration. Re-enabling
+one requires an explicit security and onboarding decision; the placeholders do
+not imply that a provider is currently connected.
 
-Existing external mappings are reused first, followed by exact SIS IDs. Email
-or local student-ID candidates are suggestions that require administrator
-confirmation. Names are never used to match accounts. A later confirmed sync
-archives imported memberships that disappeared from the selected Canvas
-courses; it does not delete users, attendance, rewards, or local-only
-memberships.
+## Student School Portal placeholder
+
+Students can choose **School** in their navigation to open a presentation-only
+School Portal. It shows the intended location of a future school-system
+connection inside the normal Attendance Quest layout.
+
+The placeholder does not start OAuth, load an iframe, read an integration
+connection, require `Seed_DataBase4.sql`, or display provider configuration and
+connection errors. The earlier owner-scoped Canvas connection code and migration
+remain dormant so a future provider-neutral design can reuse them deliberately.
 
 ## Teacher approval and corrections
 
@@ -133,51 +150,12 @@ Awaiting approval → Approved locally → Pending export → Officially recorde
 Officially recorded → Correction pending → Officially recorded
 ```
 
-## Attendance destination setup
+## Dormant attendance destination
 
-The installed official-record adapter is **Ed-Fi ODS/API**. It uses OAuth 2.0
-client credentials and Ed-Fi's exception-only daily attendance model: absence
-creates or updates a `StudentSchoolAttendanceEvent`, while a correction to
-present deletes the accepted absence by its stored Ed-Fi resource ID.
-
-In **Admin → Attendance Exports**, choose Ed-Fi and enter non-secret provider
-configuration:
-
-```json
-{
-  "base_url": "https://your-edfi-host.example/api",
-  "data_path": "/data/v3/ed-fi",
-  "session_name": "2026-2027 School Year",
-  "school_year": 2027
-}
-```
-
-Enter the issued credentials separately:
-
-```json
-{
-  "client_key": "replace-me",
-  "client_secret": "replace-me"
-}
-```
-
-Use `exception-only` as the present mapping. The absent mapping must be the
-installation's complete `AttendanceEventCategoryDescriptor` URI, such as:
-
-```text
-uri://ed-fi.org/AttendanceEventCategoryDescriptor#Unexcused Absence
-```
-
-After validation, open **Identifiers** and complete unresolved mappings:
-
-- school → positive Ed-Fi `schoolId`
-- class → the Ed-Fi section identifier expected by this installation
-- student → Ed-Fi `studentUniqueId`
-
-Attendance Quest seeds these from stored SIS IDs when possible. The destination
-cannot become active until its connection, codes, and required identifiers
-validate. It also cannot be enabled unless its adapter declares safe upsert or
-correction behavior.
+The Ed-Fi adapter and provider-neutral outbox remain in the codebase, but the
+admin configuration, mapping, validation, retry, and disable controls are
+paused. **Official Records** now illustrates the intended approval-to-delivery
+sequence and links back to the functional Attendance review.
 
 ## Failure and retry behavior
 
@@ -192,12 +170,12 @@ school date, external student, and batch version. Every delivery attempt and
 per-student acceptance or rejection is retained. Accepted destination record
 IDs are stored for safe corrections.
 
-Authentication and permission failures mark destination health as an error.
+When the delivery workflow is re-enabled, authentication and permission
+failures mark destination health as an error.
 Mapping errors, permanent provider rejections, missing per-student responses,
 and exhausted temporary failures remain `export_failed` and are never shown as
-officially recorded. Inspect these under **Admin → Attendance Exports**, correct
-the connection or mappings, and use **Retry**. Manual retries are still durable
-attempts and do not erase the earlier failure.
+officially recorded. The current placeholder does not expose queue inspection
+or manual retry controls.
 
 ## Logs and audit trail
 
@@ -231,7 +209,8 @@ does not contain names, email addresses, tokens, or credential JSON.
 6. Register the adapter once in `cmd/webserver/main.go`. Duplicate kinds are a
    startup log error.
 7. Add the smallest admin-only configuration flow required by the provider.
-   Do not add student provider linking or LMS content features.
+   Keep student-facing capabilities explicit and minimal; never expose LMS
+   content merely because an adapter supports it.
 8. Verify pagination, matching, idempotency, corrections, partial delivery
    results, retry classification, and credential redaction with automated tests.
 

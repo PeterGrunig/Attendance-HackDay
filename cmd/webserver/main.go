@@ -38,6 +38,7 @@ func main() {
 		os.Getenv("CANVAS_CLIENT_ID"),
 		os.Getenv("CANVAS_CLIENT_SECRET"),
 		os.Getenv("CANVAS_REDIRECT_URL"),
+		os.Getenv("CANVAS_BASE_URL"),
 	)
 	registry := integrations.NewProviderRegistry()
 	if err := registry.Register(canvasClient); err != nil {

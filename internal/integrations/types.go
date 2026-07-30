@@ -29,6 +29,9 @@ type ConnectionRole string
 const (
 	ConnectionRoleRosterSource          ConnectionRole = "roster_source"
 	ConnectionRoleAttendanceDestination ConnectionRole = "attendance_destination"
+	// ConnectionRoleStudentLink marks a provider login owned by one student;
+	// it must never be treated as an administrator roster source.
+	ConnectionRoleStudentLink ConnectionRole = "student_link"
 )
 
 type ProviderMetadata struct {

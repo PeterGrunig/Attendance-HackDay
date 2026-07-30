@@ -17,10 +17,9 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - Teacher and admin dashboard scaffolding plus classroom management routes.
 - Teacher attendance approval for assigned classes, with admin access to every class. Student check-ins default the daily roster to present, missing check-ins default to absent, and each whole-class approval is stored as an immutable version. A later approval creates a correction-pending version without changing check-in rewards.
 - Provider-neutral roster-source and attendance-destination contracts, encrypted connection persistence, external identity mappings, and versioned attendance-export records.
-- Provider-neutral attendance export outbox with per-student acceptance, external record identifiers, correction support, deterministic idempotency identities, five bounded automatic attempts, and manual retry from **Admin → Attendance Exports**. Failed batches remain visibly unofficial.
-- Ed-Fi ODS/API attendance destination using OAuth 2.0 client credentials and exception-only daily attendance. Absences are safely upserted, accepted absence IDs are retained, and a correction to present deletes the corresponding Ed-Fi event.
-- Admin-only Canvas OAuth and manual roster import for selected courses. Imports include classes, teachers, students, and memberships only; assignments, grades, submissions, course content, passwords, and Canvas student pages are excluded.
-- Canvas imports automatically reuse stored external/SIS mappings. Email and local-ID candidates require confirmation, names are never used for matching, new users receive pending local accounts, and removed imported memberships are archived without deleting users or attendance history.
+- Provider-specific Canvas, Ed-Fi, encrypted connection, mapping, and export code remains available as dormant architecture. The admin **Roster Connection** and **Official Records** screens are presentation placeholders and their mutation routes are not registered.
+- The student navigation includes a static **School Portal** placeholder showing where a future Canvas or provider-neutral school connection could appear. It performs no OAuth, iframe loading, credential lookup, or database migration check.
+- Admin pages support persistent light and dark display modes while the functional Attendance review remains available.
 
 Some teacher/admin reporting and schedule-management flows are still in progress;
 see `todo.md` for the remaining project checklist.
@@ -36,7 +35,7 @@ extension guidance.
 - `internal/store` contains all PostgreSQL data access, including atomic attendance rewards and shop purchases.
 - `internal/domain` contains persisted application models.
 - `internal/integrations` contains provider-neutral contracts, capability metadata, provider registration, and AES-GCM credential encryption.
-- `internal/integrations/canvas` contains the Canvas OAuth client and roster-only adapter.
+- `internal/integrations/canvas` contains the Canvas OAuth client, roster-only adapter, and dormant owner-scoped connection support.
 - `internal/integrations/edfi` contains the official daily-attendance destination adapter.
 - `internal/attendanceexport` orchestrates destination validation, durable outbox delivery, bounded retries, and provider-neutral response handling.
 - `internal/view` contains embedded templates, static CSS, and images.
@@ -98,10 +97,10 @@ port instead of `localhost:5433`.
 For hosted deployments, store `DATABASE_URL` and integration secrets in the
 hosting platform's secret manager.
 
-`INTEGRATION_CREDENTIAL_KEY` enables encrypted provider credentials; Canvas
-OAuth also uses `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and
-`CANVAS_REDIRECT_URL`. The core application can start without these values, but
-integration credential operations remain unavailable. See the
+`INTEGRATION_CREDENTIAL_KEY` enables encrypted provider credentials. Dormant
+Canvas adapter code can also use `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and
+`CANVAS_REDIRECT_URL` when its routes are deliberately re-enabled. The current
+student and admin connection placeholders require none of these values. See the
 [integration runbook](docs/integrations.md) before connecting Canvas or Ed-Fi.
 
 ## Check Database in DBeaver
@@ -160,16 +159,36 @@ integration credential operations remain unavailable. See the
    `ClassroomStudents`, and `AttendanceRecords` for compatibility.
 
     ```powershell
-    Get-Content -Raw .\Seed_DataBase3.sql | docker exec -i attendance-postgres psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
+    Get-Content -Raw .\Seed_DataBase3.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
     ```
 
     Bash / WSL:
 
     ```bash
-    docker exec -i attendance-postgres psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase3.sql
+    docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase3.sql
+    ```
+
+5. Optionally apply the additive owner-scoping migration before re-enabling the
+   dormant student provider-account linking code:
+
+    ```powershell
+    Get-Content -Raw .\Seed_DataBase4.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
+    ```
+
+    Bash / WSL:
+
+    ```bash
+    docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase4.sql
     ```
 
 The application does not apply `Seed_DataBase3.sql` automatically. It must be
-applied before deploying the updated membership, Canvas import, teacher
-approval, or attendance-export store code. Canvas, approval, outbox, and Ed-Fi
-support use these existing integration tables and require no later migration.
+applied before deploying the updated membership, teacher approval, or dormant
+provider store code. Approval and provider scaffolding use these integration
+tables and require no later migration.
+The application also does not apply `Seed_DataBase4.sql`. The current static
+student School Portal does not need it; apply it before re-enabling persisted
+student provider connections.
+
+The demo seeds use a provider-neutral `Demo Elementary School`. Every seeded
+classroom membership references a seeded user with the matching role, and no
+Canvas, Ed-Fi, or other external connection is inserted automatically.
