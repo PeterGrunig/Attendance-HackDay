@@ -366,8 +366,8 @@ func (c *storeTestConn) QueryContext(_ context.Context, query string, args []dri
 		return state.queryClassroomExists(namedValueString(args, 0)), nil
 	case strings.Contains(normalized, "select 1") && strings.Contains(normalized, "from users"):
 		return state.queryUserExists(namedValueString(args, 0)), nil
-	case strings.Contains(normalized, "from classrooms") && strings.Contains(normalized, "classroomstudents"):
-		return state.queryClassroomsWithStudents(), nil
+	case strings.Contains(normalized, "from classrooms") && strings.Contains(normalized, "classroommemberships"):
+		return state.queryClassroomsWithMemberships(), nil
 	case strings.Contains(normalized, "from users"):
 		return state.queryUsers(), nil
 	default:
@@ -388,10 +388,16 @@ func (c *storeTestConn) ExecContext(_ context.Context, query string, args []driv
 		return state.execUpdateClassroom(args)
 	case strings.Contains(normalized, "delete from classroomstudents"):
 		return state.execDeleteClassroomStudents(args)
+	case strings.Contains(normalized, "delete from classroommemberships"):
+		return storeTestResult(1), nil
 	case strings.Contains(normalized, "insert into classroomstudents"):
 		return state.execInsertClassroomStudent(args)
-	case strings.Contains(normalized, "update users"):
+	case strings.Contains(normalized, "insert into classroommemberships"):
+		return state.execInsertClassroomMembership(normalized, args)
+	case strings.Contains(normalized, "update users") && strings.Contains(normalized, "set role"):
 		return state.execUpdateUserRole(args)
+	case strings.Contains(normalized, "update users") && strings.Contains(normalized, "set classroomid"):
+		return state.execAssignUserClassroom(args)
 	default:
 		return nil, fmt.Errorf("unsupported exec: %s", query)
 	}
@@ -448,19 +454,21 @@ func (s *storeTestState) queryUserExists(userID string) driver.Rows {
 	return storeTestRows([]string{"exists"}, nil)
 }
 
-func (s *storeTestState) queryClassroomsWithStudents() driver.Rows {
+func (s *storeTestState) queryClassroomsWithMemberships() driver.Rows {
 	rows := [][]driver.Value{}
 	for _, classroom := range sortedClassrooms(s.classrooms) {
 		studentIDs := sortedStudentIDs(s.classroomStudents[classroom.ID])
-		if len(studentIDs) == 0 {
-			rows = append(rows, []driver.Value{classroom.ID, classroom.Name, classroom.TeacherID, ""})
-			continue
+		if len(studentIDs) == 0 && classroom.TeacherID == "" {
+			rows = append(rows, []driver.Value{classroom.ID, classroom.Name, "", "", false, ""})
 		}
 		for _, studentID := range studentIDs {
-			rows = append(rows, []driver.Value{classroom.ID, classroom.Name, classroom.TeacherID, studentID})
+			rows = append(rows, []driver.Value{classroom.ID, classroom.Name, studentID, "student", true, ""})
+		}
+		if classroom.TeacherID != "" {
+			rows = append(rows, []driver.Value{classroom.ID, classroom.Name, classroom.TeacherID, "teacher", true, ""})
 		}
 	}
-	return storeTestRows([]string{"ID", "Name", "TeacherID", "StudentID"}, rows)
+	return storeTestRows([]string{"ID", "Name", "UserID", "MembershipRole", "IsPrimary", "ManagedBy"}, rows)
 }
 
 func (s *storeTestState) queryUsers() driver.Rows {
@@ -550,6 +558,32 @@ func (s *storeTestState) execInsertClassroomStudent(args []driver.NamedValue) (d
 		return storeTestResult(0), nil
 	}
 	s.classroomStudents[classroomID][studentID] = true
+	return storeTestResult(1), nil
+}
+
+func (s *storeTestState) execInsertClassroomMembership(normalized string, args []driver.NamedValue) (driver.Result, error) {
+	classroomID := namedValueString(args, 0)
+	userID := namedValueString(args, 1)
+	if strings.Contains(normalized, "'teacher'") {
+		classroom := s.classrooms[classroomID]
+		classroom.TeacherID = userID
+		s.classrooms[classroomID] = classroom
+		return storeTestResult(1), nil
+	}
+	if strings.Contains(normalized, "'student'") {
+		return s.execInsertClassroomStudent(args)
+	}
+	return nil, fmt.Errorf("unsupported classroom membership: %s", normalized)
+}
+
+func (s *storeTestState) execAssignUserClassroom(args []driver.NamedValue) (driver.Result, error) {
+	userID := namedValueString(args, 0)
+	user, ok := s.users[userID]
+	if !ok || user.ClassroomID != "" {
+		return storeTestResult(0), nil
+	}
+	user.ClassroomID = namedValueString(args, 1)
+	s.users[userID] = user
 	return storeTestResult(1), nil
 }
 

@@ -20,7 +20,7 @@ func TestSavedAvatarConfigDefaultsAndDropsUnavailableValues(t *testing.T) {
 }
 
 func TestValidateAvatarConfigAcceptsOwnedCosmetics(t *testing.T) {
-	owned := []string{"hat_star", "cape_gold", "glasses_rocket", "trail_rainbow"}
+	owned := []string{"mike", "hat_star", "cape_gold", "glasses_rocket", "trail_rainbow"}
 	cfg, err := validateAvatarConfig(owned, &AvatarConfig{
 		Base: "mike", HairStyle: "hat_star", Clothing: "cape_gold",
 		Accessory: "glasses_rocket", Effect: "trail_rainbow",
