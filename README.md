@@ -60,6 +60,23 @@ Run automated validation with:
 go test ./...
 ```
 
+## CI/CD Pipeline
+
+GitHub Actions runs `.github/workflows/ci-cd.yml` for every push, for pull
+requests targeting `main`, and when started manually. The validation job uses
+the Go version declared in `go.mod`, downloads the locked modules, runs
+`go vet ./...` and `go test -count=1 ./...`, and builds the web server.
+
+After validation succeeds on `main` or on a tag beginning with `v`, the delivery
+job builds a stripped Linux AMD64 server binary and uploads a compressed bundle
+plus its SHA-256 checksum as a GitHub Actions artifact. Artifacts are retained
+for 14 days. The existing CodeQL workflow continues to perform security scans.
+
+This is continuous delivery, not provider-specific deployment: the repository
+does not currently identify a production hosting provider. Connect the delivery
+job to that provider after choosing the target, and configure `DATABASE_URL` and
+any integration credentials through its secret manager.
+
 To run the app manually:
 
 ```sh

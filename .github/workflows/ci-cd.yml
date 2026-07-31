@@ -1,0 +1,85 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Vet, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Log toolchain
+        run: |
+          go version
+          go env GOOS GOARCH GOMOD
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      - name: Build server
+        run: go build -trimpath -o /tmp/attendance-web ./cmd/webserver
+
+  deliver:
+    name: Publish deployable artifact
+    needs: validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Build Linux server
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags="-s -w" -o dist/attendance-web ./cmd/webserver
+          chmod 0755 dist/attendance-web
+          tar -C dist -czf attendance-web-linux-amd64.tar.gz attendance-web
+          sha256sum attendance-web-linux-amd64.tar.gz | tee attendance-web-linux-amd64.tar.gz.sha256
+
+      - name: Upload deployment bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: attendance-web-linux-amd64-${{ github.sha }}
+          path: |
+            attendance-web-linux-amd64.tar.gz
+            attendance-web-linux-amd64.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
