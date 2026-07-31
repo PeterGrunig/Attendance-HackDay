@@ -9,6 +9,9 @@ items, unlock base avatars, and customize a character with owned cosmetics.
 - SQL-backed login with in-memory session tokens and role-aware routing.
 - SQL-backed student dashboard focused on attendance status, rewards, the current avatar, and upcoming double-reward days.
 - Student shop with SQL-backed catalog, ownership, coin validation, and atomic purchases.
+- Classroom prize stores let teachers publish real-life rewards with optional
+  inventory. Student purchases atomically debit coins, create tracked
+  redemptions, and queue email notifications for assigned teachers.
 - Avatar customization with Gerald as the free base, purchased character and cosmetic unlocks, layered visual preview, and SQL-backed saves.
 - Student pages include persistent light/dark controls, free background colors, unlocked special background themes, and a coin shop where every base avatar except Gerald costs 10 coins.
 - Gerald is the free default avatar. Locked characters remain visible on the avatar page but cannot be equipped until purchased; hats, clothing, accessories, and effects use slot- and character-aware placement.
@@ -38,6 +41,8 @@ extension guidance.
 - `internal/integrations/canvas` contains the Canvas OAuth client, roster-only adapter, and dormant owner-scoped connection support.
 - `internal/integrations/edfi` contains the official daily-attendance destination adapter.
 - `internal/attendanceexport` orchestrates destination validation, durable outbox delivery, bounded retries, and provider-neutral response handling.
+- `internal/prizeemail` sends durable classroom-prize notifications through
+  STARTTLS-protected SMTP with bounded retries.
 - `internal/view` contains embedded templates, static CSS, and images.
 
 PostgreSQL is the application's only runtime data store. The browser cookie contains an opaque token; its short-lived session record remains in application memory and references the SQL `Users.UserID`.
@@ -63,8 +68,8 @@ go test ./...
 The automated suite covers several layers:
 
 - Unit and component tests exercise avatar rules, provider registration,
-  credential encryption, export orchestration, sessions, CSRF, authorization,
-  template rendering, and static asset contracts.
+  credential encryption, export orchestration, prize notification retries,
+  sessions, CSRF, authorization, template rendering, and static asset contracts.
 - Adapter tests use `httptest` servers to verify outbound Ed-Fi behavior without
   contacting a real provider.
 - PostgreSQL integration tests exercise SQL transactions and normalized roster
@@ -126,6 +131,13 @@ port instead of `localhost:5433`.
 
 For hosted deployments, store `DATABASE_URL` and integration secrets in the
 hosting platform's secret manager.
+
+Classroom prize purchases work without SMTP, but notification rows remain
+pending until email is configured. Set `SMTP_HOST`, `SMTP_FROM`, and optionally
+`SMTP_USERNAME`/`SMTP_PASSWORD`; `SMTP_PORT` defaults to `587` and
+`SMTP_REQUIRE_TLS` defaults to `true`. Plaintext SMTP is rejected for remote
+hosts. The worker retries failed messages five times, while teachers can always
+see pending redemptions in the app.
 
 `INTEGRATION_CREDENTIAL_KEY` enables encrypted provider credentials. Dormant
 Canvas adapter code can also use `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and
@@ -211,6 +223,19 @@ student and admin connection placeholders require none of these values. See the
     docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase4.sql
     ```
 
+6. Apply the additive classroom prize store migration before deploying the
+   prize pages or email worker:
+
+    ```powershell
+    Get-Content -Raw .\Seed_DataBase5.sql | docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday
+    ```
+
+    Bash / WSL:
+
+    ```bash
+    docker-compose exec -T db psql --set=ON_ERROR_STOP=1 --username=attendance --dbname=attendancehackday < Seed_DataBase5.sql
+    ```
+
 The application does not apply `Seed_DataBase3.sql` automatically. It must be
 applied before deploying the updated membership, teacher approval, or dormant
 provider store code. Approval and provider scaffolding use these integration
@@ -218,6 +243,8 @@ tables and require no later migration.
 The application also does not apply `Seed_DataBase4.sql`. The current static
 student School Portal does not need it; apply it before re-enabling persisted
 student provider connections.
+The application does not apply `Seed_DataBase5.sql`; apply it before enabling
+classroom prizes. It is additive and safe to run again.
 
 The demo seeds use a provider-neutral `Demo Elementary School`. Every seeded
 classroom membership references a seeded user with the matching role, and no

@@ -1,0 +1,59 @@
+{{define "content"}}
+<div class="teacher-prize-page">
+  {{if .Message}}<div class="integration-message">{{.Message}}</div>{{end}}
+  {{if .Error}}<div class="integration-message integration-message-error">{{.Error}}</div>{{end}}
+
+  <section class="admin-form-card teacher-prize-create">
+    <h2>Add a prize</h2>
+    {{if .Classrooms}}
+    <form method="POST" action="/teacher/prizes/create" class="prize-form-grid">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <label>Classroom<select name="classroom_id" required>{{range .Classrooms}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></label>
+      <label>Prize name<input name="name" maxlength="100" required></label>
+      <label>Emoji<input name="emoji" maxlength="8" placeholder="🎁"></label>
+      <label>Coin price<input name="coin_price" type="number" min="1" max="10000" required></label>
+      <label>Available stock<input name="available_stock" type="number" min="0" max="10000" placeholder="Blank means unlimited"></label>
+      <label class="prize-description-field">Description<textarea name="description" maxlength="500" rows="3"></textarea></label>
+      <input type="hidden" name="active" value="true">
+      <button type="submit" class="admin-nav-item">Create prize</button>
+    </form>
+    {{else}}<p>You need an active classroom assignment before creating prizes.</p>{{end}}
+  </section>
+
+  <section class="teacher-prize-section">
+    <h2>Prize catalog</h2>
+    <div class="teacher-prize-list">
+      {{range .Prizes}}
+      <form method="POST" action="/teacher/prizes/update" class="admin-form-card teacher-prize-row">
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="prize_id" value="{{.ID}}"><input type="hidden" name="classroom_id" value="{{.ClassroomID}}">
+        <div class="teacher-prize-row-heading"><strong>{{if .Emoji}}{{.Emoji}} {{end}}{{.Name}}</strong><small>{{.ClassroomName}}</small></div>
+        <label>Name<input name="name" value="{{.Name}}" maxlength="100" required></label>
+        <label>Emoji<input name="emoji" value="{{.Emoji}}" maxlength="8"></label>
+        <label>Price<input name="coin_price" type="number" min="1" max="10000" value="{{.CoinPrice}}" required></label>
+        <label>Stock<input name="available_stock" type="number" min="0" max="10000" {{if .AvailableStock}}value="{{.AvailableStock}}"{{end}} placeholder="Unlimited"></label>
+        <label class="prize-description-field">Description<textarea name="description" maxlength="500" rows="2">{{.Description}}</textarea></label>
+        <label class="prize-active-toggle"><input type="checkbox" name="active" value="true" {{if .Active}}checked{{end}}> Available to students</label>
+        <button type="submit" class="admin-nav-item">Save</button>
+      </form>
+      {{else}}<div class="shop-empty-state"><h3>No prizes yet</h3><p>Create the first classroom prize above.</p></div>{{end}}
+    </div>
+  </section>
+
+  <section class="teacher-prize-section">
+    <h2>Student redemptions</h2>
+    <div class="teacher-redemption-list">
+      {{range .Redemptions}}
+      <article class="admin-form-card teacher-redemption-row">
+        <div><strong>#{{.ID}} · {{if .PrizeEmoji}}{{.PrizeEmoji}} {{end}}{{.PrizeName}}</strong><p>{{.StudentName}} · {{.ClassroomName}} · {{.CoinPrice}} coins</p><small>{{.PurchasedAt.Format "Jan 2, 2006 3:04 PM"}} · Email: {{.NotificationStatus}}</small></div>
+        <span class="integration-status integration-status-{{.Status}}">{{.Status}}</span>
+        {{if eq .Status "pending"}}<div class="teacher-redemption-actions">
+          <form method="POST" action="/teacher/prizes/fulfill"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="redemption_id" value="{{.ID}}"><button type="submit" class="admin-nav-item">Fulfilled</button></form>
+          <form method="POST" action="/teacher/prizes/cancel"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="redemption_id" value="{{.ID}}"><button type="submit" class="admin-logout-btn">Cancel &amp; refund</button></form>
+        </div>{{end}}
+      </article>
+      {{else}}<div class="shop-empty-state"><h3>No redemptions yet</h3><p>Student purchases will appear here.</p></div>{{end}}
+    </div>
+  </section>
+</div>
+{{end}}
+{{template "base" .}}

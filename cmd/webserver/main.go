@@ -11,6 +11,7 @@ import (
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations/canvas"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/integrations/edfi"
+	"github.com/PeterGrunig/Attendance-HackDay/internal/prizeemail"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/store"
 	"github.com/PeterGrunig/Attendance-HackDay/internal/web"
 	"github.com/joho/godotenv"
@@ -52,6 +53,12 @@ func main() {
 	exporter := attendanceexport.New(sqlStore, registry)
 	web.ConfigureAttendanceExports(registry, exporter)
 	go exporter.Run(context.Background())
+	mailConfig, mailErr := prizeemail.SMTPConfigFromEnvironment()
+	if mailErr != nil {
+		log.Printf("prize email delivery disabled: %v", mailErr)
+	} else {
+		go prizeemail.New(sqlStore, prizeemail.NewSMTPMailer(mailConfig)).Run(context.Background())
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

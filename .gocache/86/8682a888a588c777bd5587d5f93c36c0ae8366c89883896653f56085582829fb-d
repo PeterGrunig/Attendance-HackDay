@@ -1,0 +1,12 @@
+./admin_student.go
+./admin_teacher.go
+./admin_user.go
+./attendance_approval.go
+./attendance_destination_mappings.go
+./attendance_export.go
+./auth.go
+./integrations.go
+./prizes.go
+./student.go
+./student_integrations.go
+./teacher_student.go

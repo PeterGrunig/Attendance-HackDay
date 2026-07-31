@@ -38,6 +38,7 @@ func resetSecurityTestGlobals(t *testing.T) {
 	previousCanvasIntegrationStore := canvasIntegrationStore
 	previousAttendanceApprovalStore := attendanceApprovalStore
 	previousAttendanceExportStore := attendanceExportStore
+	previousPrizeStore := prizeStore
 	sessionMu.Lock()
 	previousSessions := sessionStore
 	sessionStore = map[string]sessionRecord{}
@@ -53,6 +54,7 @@ func resetSecurityTestGlobals(t *testing.T) {
 		canvasIntegrationStore = previousCanvasIntegrationStore
 		attendanceApprovalStore = previousAttendanceApprovalStore
 		attendanceExportStore = previousAttendanceExportStore
+		prizeStore = previousPrizeStore
 		sessionMu.Lock()
 		sessionStore = previousSessions
 		sessionMu.Unlock()

@@ -35,6 +35,10 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			},
 		},
 		{
+			name: "student classroom prizes",
+			load: func() (*template.Template, error) { return loadStudentTemplates("prizes.html") },
+		},
+		{
 			name: "student avatar",
 			load: func() (*template.Template, error) {
 				return loadStudentTemplates("avatarView.html")
@@ -51,6 +55,10 @@ func TestRenderedPagesReferenceExistingCSS(t *testing.T) {
 			load: func() (*template.Template, error) {
 				return loadTeacherTemplates("attendanceApproval.html")
 			},
+		},
+		{
+			name: "teacher classroom prizes",
+			load: func() (*template.Template, error) { return loadTeacherTemplates("teacherPrizes.html") },
 		},
 		{
 			name: "admin dashboard",

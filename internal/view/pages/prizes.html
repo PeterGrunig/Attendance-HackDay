@@ -1,0 +1,47 @@
+{{define "content"}}
+<div class="shop-page prize-store-page">
+  <div class="hero-card">
+    <h1>Classroom Prizes</h1>
+    <p>Use attendance coins for rewards your teachers will hand out in class.</p>
+  </div>
+  {{if .Message}}<div class="shop-message">{{.Message}}</div>{{end}}
+  {{if .Error}}<div class="shop-message avatar-error">{{.Error}}</div>{{end}}
+  <div class="shop-coin-card"><div class="coin-icon">🪙</div><div><div class="coin-label">Your Coins</div><div class="coin-count">{{.Coins}}</div></div></div>
+
+  {{range .Catalogs}}
+  <section class="shop-section">
+    <div class="section-header"><h2>{{.ClassroomName}}</h2><p>Rewards available from this classroom.</p></div>
+    <div class="shop-grid">
+      {{range .Prizes}}
+      <article class="shop-item-card prize-item-card">
+        <div class="prize-emoji" aria-hidden="true">{{if .Emoji}}{{.Emoji}}{{else}}🎁{{end}}</div>
+        <div class="shop-item-name">{{.Name}}</div>
+        <div class="shop-item-desc">{{.Description}}</div>
+        <div class="shop-item-cost">{{.CoinPrice}} coins</div>
+        <div class="prize-stock">{{.StockLabel}}</div>
+        {{if .IsOutOfStock}}
+        <button class="shop-buy-btn" type="button" disabled>Out of stock</button>
+        {{else}}
+        <form method="POST" action="/prizes/purchase">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <input type="hidden" name="prize_id" value="{{.ID}}">
+          <button class="shop-buy-btn" type="submit">Buy prize</button>
+        </form>
+        {{end}}
+      </article>
+      {{else}}<div class="shop-empty-state"><h3>No prizes yet</h3><p>Your teacher has not added classroom prizes.</p></div>{{end}}
+    </div>
+  </section>
+  {{else}}<div class="shop-empty-state"><h3>No classroom prize stores</h3><p>Join a classroom to see teacher-created prizes.</p></div>{{end}}
+
+  <section class="shop-section">
+    <div class="section-header"><h2>My Orders</h2><p>Show this list to your teacher when receiving a prize.</p></div>
+    <div class="prize-order-list">
+      {{range .Redemptions}}
+      <article class="prize-order-row"><span class="prize-order-emoji">{{if .PrizeEmoji}}{{.PrizeEmoji}}{{else}}🎁{{end}}</span><div><strong>{{.PrizeName}}</strong><small>{{.ClassroomName}} · {{.CoinPrice}} coins · {{.PurchasedAt.Format "Jan 2, 2006 3:04 PM"}}</small></div><span class="prize-status prize-status-{{.Status}}">{{.Status}}</span></article>
+      {{else}}<div class="shop-empty-state"><h3>No prize orders yet</h3><p>Your classroom prize purchases will appear here.</p></div>{{end}}
+    </div>
+  </section>
+</div>
+{{end}}
+{{template "base" .}}

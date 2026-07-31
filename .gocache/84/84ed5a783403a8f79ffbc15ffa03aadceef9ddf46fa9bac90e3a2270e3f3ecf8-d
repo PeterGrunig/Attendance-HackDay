@@ -1,0 +1,4 @@
+./credentials.go
+./errors.go
+./registry.go
+./types.go

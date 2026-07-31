@@ -692,6 +692,75 @@ html[data-admin-mode="dark"] .admin-shell {
   border-bottom: 0;
 }
 
+.teacher-prize-page,
+.teacher-prize-list,
+.teacher-redemption-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.teacher-prize-section { margin-top: 1.5rem; }
+
+.prize-form-grid,
+.teacher-prize-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.prize-form-grid label,
+.teacher-prize-row label {
+  display: grid;
+  align-content: start;
+  gap: .35rem;
+  color: var(--admin-text);
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.prize-form-grid input,
+.prize-form-grid select,
+.prize-form-grid textarea,
+.teacher-prize-row input,
+.teacher-prize-row textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: .6rem .7rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  color: var(--admin-text);
+  background: var(--admin-panel);
+  font: inherit;
+}
+
+.prize-description-field,
+.teacher-prize-row-heading { grid-column: span 2; }
+.prize-active-toggle { align-items: center; grid-template-columns: auto 1fr; }
+.prize-active-toggle input { width: auto; min-height: auto; }
+.teacher-prize-row-heading small { display: block; margin-top: .2rem; color: var(--admin-muted); }
+
+.teacher-redemption-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.teacher-redemption-row p { margin: .3rem 0; }
+.teacher-redemption-row small { color: var(--admin-muted); }
+.teacher-redemption-actions { display: flex; gap: .5rem; }
+.teacher-redemption-actions form { margin: 0; }
+.teacher-redemption-actions .admin-nav-item { margin: 0; }
+
+@media (max-width: 760px) {
+  .prize-form-grid,
+  .teacher-prize-row,
+  .teacher-redemption-row { grid-template-columns: 1fr; }
+  .prize-description-field,
+  .teacher-prize-row-heading { grid-column: auto; }
+  .teacher-redemption-actions { align-items: stretch; flex-direction: column; }
+}
+
 .admin-shell td form {
   display: flex;
   align-items: center;

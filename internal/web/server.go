@@ -19,6 +19,7 @@ type AppStore interface {
 	CanvasIntegrationStore
 	AttendanceApprovalStore
 	AttendanceExportStore
+	PrizeStore
 }
 
 func NewRouter(appStore AppStore) http.Handler {
@@ -32,6 +33,7 @@ func NewRouter(appStore AppStore) http.Handler {
 	canvasIntegrationStore = appStore
 	attendanceApprovalStore = appStore
 	attendanceExportStore = appStore
+	prizeStore = appStore
 	mux := http.NewServeMux()
 
 	staticFS, err := fs.Sub(view.FS, "static")
@@ -59,6 +61,8 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("GET /studentDashboard", RequireRole(http.HandlerFunc(studentView), "student"))
 	mux.Handle("GET /shop", RequireRole(http.HandlerFunc(shopView), "student"))
 	mux.Handle("POST /shop/buy", RequireRole(http.HandlerFunc(shopBuyView), "student"))
+	mux.Handle("GET /prizes", RequireRole(http.HandlerFunc(studentPrizeView), "student"))
+	mux.Handle("POST /prizes/purchase", RequireRole(http.HandlerFunc(studentPrizePurchase), "student"))
 	mux.Handle("GET /avatar", RequireRole(http.HandlerFunc(avatarView), "student"))
 	mux.Handle("POST /avatar/preview", RequireRole(http.HandlerFunc(avatarPreviewView), "student"))
 	mux.Handle("POST /avatar", RequireRole(http.HandlerFunc(avatarSaveView), "student"))
@@ -71,6 +75,11 @@ func NewRouter(appStore AppStore) http.Handler {
 	mux.Handle("GET /teacherDashboard/addStudent", RequireRole(http.HandlerFunc(teacherAddStudent), "teacher"))
 	mux.Handle("GET /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalView), "teacher", "admin"))
 	mux.Handle("POST /attendance/approval", RequireRole(http.HandlerFunc(attendanceApprovalSubmit), "teacher", "admin"))
+	mux.Handle("GET /teacher/prizes", RequireRole(http.HandlerFunc(teacherPrizeView), "teacher"))
+	mux.Handle("POST /teacher/prizes/create", RequireRole(http.HandlerFunc(teacherPrizeCreate), "teacher"))
+	mux.Handle("POST /teacher/prizes/update", RequireRole(http.HandlerFunc(teacherPrizeUpdate), "teacher"))
+	mux.Handle("POST /teacher/prizes/fulfill", RequireRole(http.HandlerFunc(teacherPrizeFulfill), "teacher"))
+	mux.Handle("POST /teacher/prizes/cancel", RequireRole(http.HandlerFunc(teacherPrizeCancel), "teacher"))
 
 	// admin routes
 	mux.Handle("GET /adminDashboard", RequireRole(http.HandlerFunc(adminView), "admin"))

@@ -887,6 +887,47 @@ html[data-student-bg="sunset"] body::before {
   cursor: default;
 }
 
+.prize-emoji {
+  min-height: 4.5rem;
+  display: grid;
+  place-items: center;
+  margin-top: .35rem;
+  font-size: 3rem;
+}
+
+.prize-stock {
+  margin: .35rem 0 .8rem;
+  color: var(--student-muted);
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.prize-order-list {
+  display: grid;
+  border-top: 2px solid var(--student-line);
+}
+
+.prize-order-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .85rem;
+  padding: .9rem 0;
+  border-bottom: 1px solid var(--student-line);
+}
+
+.prize-order-row small {
+  display: block;
+  margin-top: .25rem;
+  color: var(--student-muted);
+}
+
+.prize-order-emoji { font-size: 1.8rem; }
+.prize-status { font-weight: 900; text-transform: capitalize; }
+.prize-status-pending { color: var(--student-gold); }
+.prize-status-fulfilled { color: var(--student-green); }
+.prize-status-canceled { color: var(--student-red); }
+
 .avatar-save-btn {
   background: var(--student-green);
 }
