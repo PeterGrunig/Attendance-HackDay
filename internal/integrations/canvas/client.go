@@ -413,9 +413,15 @@ func decodeConnection(connection integrations.Connection) (ConnectionConfig, Cre
 	return config, credentials, nil
 }
 
+// normalizeBaseURL permits plaintext HTTP only for local development so OAuth
+// tokens and roster data cannot be sent to a remote Canvas host unencrypted.
 func normalizeBaseURL(value string) (string, error) {
 	parsed, err := url.Parse(strings.TrimRight(strings.TrimSpace(value), "/"))
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+	if err != nil || parsed.Host == "" {
+		return "", fmt.Errorf("%w: valid Canvas base URL is required", integrations.ErrInvalidConfiguration)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && (host == "localhost" || host == "127.0.0.1")) {
 		return "", fmt.Errorf("%w: valid Canvas base URL is required", integrations.ErrInvalidConfiguration)
 	}
 	return parsed.String(), nil

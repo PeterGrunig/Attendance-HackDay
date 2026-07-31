@@ -60,12 +60,25 @@ Run automated validation with:
 go test ./...
 ```
 
+The automated suite covers several layers:
+
+- Unit and component tests exercise avatar rules, provider registration,
+  credential encryption, export orchestration, sessions, CSRF, authorization,
+  template rendering, and static asset contracts.
+- Adapter tests use `httptest` servers to verify outbound Ed-Fi behavior without
+  contacting a real provider.
+- PostgreSQL integration tests exercise SQL transactions and normalized roster
+  reads against a disposable database. Run them by setting `TEST_DATABASE_URL`
+  and using `go test -tags=integration -count=1 -v ./internal/store`.
+- CI shuffles test order and runs the complete suite under Go's race detector.
+
 ## CI/CD Pipeline
 
 GitHub Actions runs `.github/workflows/ci-cd.yml` for every push, for pull
-requests targeting `main`, and when started manually. The validation job uses
-the Go version declared in `go.mod`, downloads the locked modules, runs
-`go vet ./...` and `go test -count=1 ./...`, and builds the web server.
+requests targeting `main`, and when started manually. The pipeline uses the Go
+version declared in `go.mod`, runs vet plus shuffled tests, runs a separate race
+detector job, verifies the store against PostgreSQL 16, and builds the web
+server.
 
 After validation succeeds on `main` or on a tag beginning with `v`, the delivery
 job builds a stripped Linux AMD64 server binary and uploads a compressed bundle
